@@ -20,7 +20,8 @@ export default function LoginScreen() {
   const res = await api.login(mobile);
 
   if (res.success) {
-    login(mobile,res.token); // temp (we’ll improve next)
+    await login(mobile, res.token, res.user?.name || "Client");
+router.replace("/(tabs)"); // temp (we’ll improve next)
     router.replace("/(tabs)");
   }
 };

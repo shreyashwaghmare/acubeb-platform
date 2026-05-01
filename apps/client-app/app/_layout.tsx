@@ -5,42 +5,42 @@ import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { AuthProvider } from "../context/AuthContext";
+import { AuthProvider, useAuth } from "../context/AuthContext";
 import { AppProvider } from "../context/AppContext";
-
-export const unstable_settings = {
-  anchor: "(tabs)",
-};
 
 export default function RootLayout() {
   return (
     <AuthProvider>
       <AppProvider>
         <SafeAreaProvider>
-        <MainLayout />
+          <MainLayout />
         </SafeAreaProvider>
       </AppProvider>
     </AuthProvider>
   );
 }
-import { useAuth } from "../context/AuthContext";
 
 function MainLayout() {
   const colorScheme = useColorScheme();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return null;
+  }
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack>
+      <Stack screenOptions={{ headerShown: false }}>
         {!user ? (
-          <Stack.Screen name="login" options={{ headerShown: false }} />
+          <Stack.Screen name="login" />
         ) : (
           <>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" />
 
             <Stack.Screen
               name="apply-service"
               options={{
+                headerShown: true,
                 title: "Apply Service",
                 headerStyle: { backgroundColor: "#0B0B0B" },
                 headerTintColor: "#D4AF37",
@@ -50,23 +50,27 @@ function MainLayout() {
             <Stack.Screen
               name="request-detail"
               options={{
+                headerShown: true,
                 title: "Request Details",
                 headerStyle: { backgroundColor: "#0B0B0B" },
                 headerTintColor: "#D4AF37",
               }}
             />
+
             <Stack.Screen
-  name="edit-profile"
-  options={{
-    title: "Edit Profile",
-    headerStyle: { backgroundColor: "#0B0B0B" },
-    headerTintColor: "#D4AF37",
-  }}
-/>
+              name="edit-profile"
+              options={{
+                headerShown: true,
+                title: "Edit Profile",
+                headerStyle: { backgroundColor: "#0B0B0B" },
+                headerTintColor: "#D4AF37",
+              }}
+            />
 
             <Stack.Screen
               name="report-detail"
               options={{
+                headerShown: true,
                 title: "Report Details",
                 headerStyle: { backgroundColor: "#0B0B0B" },
                 headerTintColor: "#D4AF37",
