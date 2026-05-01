@@ -22,7 +22,6 @@ export default function LoginScreen() {
   if (res.success) {
     await login(mobile, res.token, res.user?.name || "Client");
 router.replace("/(tabs)"); // temp (we’ll improve next)
-    router.replace("/(tabs)");
   }
 };
 

@@ -24,16 +24,21 @@ function MainLayout() {
   const colorScheme = useColorScheme();
   const { user, loading } = useAuth();
 
+  // 🔴 Prevent wrong screen flash
   if (loading) {
     return null;
   }
 
+  const isLoggedIn = user && user.token;
+
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
-        {!user ? (
+        {!isLoggedIn ? (
+          // 🔐 AUTH FLOW
           <Stack.Screen name="login" />
         ) : (
+          // 🔓 APP FLOW
           <>
             <Stack.Screen name="(tabs)" />
 
