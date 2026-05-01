@@ -24,21 +24,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const restoreSession = async () => {
-    try {
-      const savedUser = await AsyncStorage.getItem(USER_KEY);
+  try {
+    const savedUser = await AsyncStorage.getItem(USER_KEY);
 
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
+    if (savedUser) {
+      const parsedUser = JSON.parse(savedUser);
+
+      if (parsedUser?.token) {
+        setUser(parsedUser);
       } else {
+        await AsyncStorage.removeItem(USER_KEY);
+        await AsyncStorage.removeItem(TOKEN_KEY);
         setUser(null);
       }
-    } catch (error) {
-      console.log("Restore session error:", error);
+    } else {
       setUser(null);
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (error) {
+    console.log("Restore session error:", error);
+    await AsyncStorage.removeItem(USER_KEY);
+    await AsyncStorage.removeItem(TOKEN_KEY);
+    setUser(null);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     restoreSession();
@@ -58,10 +68,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    await AsyncStorage.removeItem(TOKEN_KEY);
-    await AsyncStorage.removeItem(USER_KEY);
-    setUser(null);
-  };
+  await AsyncStorage.removeItem(TOKEN_KEY);
+  await AsyncStorage.removeItem(USER_KEY);
+  setUser(null);
+};
 
   return (
     <AuthContext.Provider value={{ user, loading, login, logout }}>
