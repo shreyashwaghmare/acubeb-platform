@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "A Cube B Consultants",
+    "slug": "acubeb-client",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "acubeb",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.acubeb.client"
+    },
+    "android": {
+      "package": "com.acubeb.client",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#111111"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#111111"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b9f4efd4-168a-4803-bce0-52731da57b3e"
+      }
+    }
+  }
+}
