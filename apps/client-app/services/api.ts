@@ -2,17 +2,17 @@
 // ⚠️ IMPORTANT: replace localhost with your IP
 
 export const api = {
-  login: async (mobile: string) => {
-    const res = await fetch(`${BASE_URL}/api/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ mobile }),
-    });
+  login: async (mobile: string, name: string) => {
+  const res = await fetch(`${BASE_URL}/api/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ mobile, name }),
+  });
 
-    return res.json();
-  },
+  return res.json();
+},
 
   getProfile: async (token: string) => {
     const res = await fetch(`${BASE_URL}/api/profile`, {

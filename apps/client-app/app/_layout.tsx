@@ -1,6 +1,7 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
-import { Stack } from "expo-router";
+import { Stack, router, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
 import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -23,66 +24,72 @@ export default function RootLayout() {
 function MainLayout() {
   const colorScheme = useColorScheme();
   const { user, loading } = useAuth();
+  const segments = useSegments();
 
-  // 🔴 Prevent wrong screen flash
+  const isLoggedIn = !!user?.token;
+  const currentRoute = segments[0];
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (!isLoggedIn && currentRoute !== "login") {
+      router.replace("/login");
+    }
+
+    if (isLoggedIn && currentRoute === "login") {
+      router.replace("/(tabs)");
+    }
+  }, [loading, isLoggedIn, currentRoute]);
+
   if (loading) {
     return null;
   }
 
-  const isLoggedIn = user && user.token;
-
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        {!isLoggedIn ? (
-          // 🔐 AUTH FLOW
-          <Stack.Screen name="login" />
-        ) : (
-          // 🔓 APP FLOW
-          <>
-            <Stack.Screen name="(tabs)" />
+      <Stack>
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
-            <Stack.Screen
-              name="apply-service"
-              options={{
-                headerShown: true,
-                title: "Apply Service",
-                headerStyle: { backgroundColor: "#0B0B0B" },
-                headerTintColor: "#D4AF37",
-              }}
-            />
+        <Stack.Screen
+          name="apply-service"
+          options={{
+            headerShown: true,
+            title: "Apply Service",
+            headerStyle: { backgroundColor: "#0B0B0B" },
+            headerTintColor: "#D4AF37",
+          }}
+        />
 
-            <Stack.Screen
-              name="request-detail"
-              options={{
-                headerShown: true,
-                title: "Request Details",
-                headerStyle: { backgroundColor: "#0B0B0B" },
-                headerTintColor: "#D4AF37",
-              }}
-            />
+        <Stack.Screen
+          name="request-detail"
+          options={{
+            headerShown: true,
+            title: "Request Details",
+            headerStyle: { backgroundColor: "#0B0B0B" },
+            headerTintColor: "#D4AF37",
+          }}
+        />
 
-            <Stack.Screen
-              name="edit-profile"
-              options={{
-                headerShown: true,
-                title: "Edit Profile",
-                headerStyle: { backgroundColor: "#0B0B0B" },
-                headerTintColor: "#D4AF37",
-              }}
-            />
+        <Stack.Screen
+          name="edit-profile"
+          options={{
+            headerShown: true,
+            title: "Edit Profile",
+            headerStyle: { backgroundColor: "#0B0B0B" },
+            headerTintColor: "#D4AF37",
+          }}
+        />
 
-            <Stack.Screen
-              name="report-detail"
-              options={{
-                headerShown: true,
-                title: "Report Details",
-                headerStyle: { backgroundColor: "#0B0B0B" },
-                headerTintColor: "#D4AF37",
-              }}
-            />
-          </>
-        )}
+        <Stack.Screen
+          name="report-detail"
+          options={{
+            headerShown: true,
+            title: "Report Details",
+            headerStyle: { backgroundColor: "#0B0B0B" },
+            headerTintColor: "#D4AF37",
+          }}
+        />
       </Stack>
 
       <StatusBar style="auto" />

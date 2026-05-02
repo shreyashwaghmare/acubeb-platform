@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { api } from "../services/api";
 
 type User = {
   name: string;
@@ -15,62 +16,59 @@ type AuthContextType = {
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
-
 const TOKEN_KEY = "ACUBEB_TOKEN";
-const USER_KEY = "ACUBEB_USER";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const restoreSession = async () => {
-  try {
-    const savedUser = await AsyncStorage.getItem(USER_KEY);
-
-    if (savedUser) {
-      const parsedUser = JSON.parse(savedUser);
-
-      if (parsedUser?.token) {
-        setUser(parsedUser);
-      } else {
-        await AsyncStorage.removeItem(USER_KEY);
-        await AsyncStorage.removeItem(TOKEN_KEY);
-        setUser(null);
-      }
-    } else {
-      setUser(null);
-    }
-  } catch (error) {
-    console.log("Restore session error:", error);
-    await AsyncStorage.removeItem(USER_KEY);
-    await AsyncStorage.removeItem(TOKEN_KEY);
-    setUser(null);
-  } finally {
-    setLoading(false);
-  }
-};
-
   useEffect(() => {
     restoreSession();
   }, []);
 
+  const restoreSession = async () => {
+    try {
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+
+      if (!token) {
+        setUser(null);
+        return;
+      }
+
+      const res = await api.getProfile(token);
+
+      if (res.success && res.data) {
+        setUser({
+          token,
+          mobile: res.data.mobile || "",
+          name: res.data.name || "Client",
+        });
+      } else {
+        await AsyncStorage.removeItem(TOKEN_KEY);
+        setUser(null);
+      }
+    } catch (error) {
+      await AsyncStorage.removeItem(TOKEN_KEY);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const login = async (mobile: string, token: string, name = "Client") => {
-    const loggedInUser: User = {
-      name,
+    await AsyncStorage.setItem(TOKEN_KEY, token);
+
+    setUser({
       mobile,
       token,
-    };
-
-    await AsyncStorage.setItem(TOKEN_KEY, token);
-    await AsyncStorage.setItem(USER_KEY, JSON.stringify(loggedInUser));
-
-    setUser(loggedInUser);
+      name,
+    });
   };
 
   const logout = async () => {
-  await AsyncStorage.clear();
-  setUser(null);
-};
+    await AsyncStorage.removeItem(TOKEN_KEY);
+    setUser(null);
+  };
 
   return (
     <AuthContext.Provider value={{ user, loading, login, logout }}>
@@ -81,10 +79,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error("useAuth must be used inside AuthProvider");
-  }
-
+  if (!context) throw new Error("useAuth must be used inside AuthProvider");
   return context;
 }

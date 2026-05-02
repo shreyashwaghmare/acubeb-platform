@@ -4,7 +4,7 @@ const pool = require("../config/db");
 
 exports.login = async (req, res) => {
   try {
-    const { mobile } = req.body;
+    const { mobile,name } = req.body;
 
     if (!mobile) {
       return res.status(400).json({ success: false, message: "Mobile is required" });
@@ -27,7 +27,17 @@ exports.login = async (req, res) => {
       user = insertResult.rows[0];
     } else {
       user = userResult.rows[0];
-    }
+      if (name && user.name === "New Client") {
+    const updateResult = await pool.query(
+      `UPDATE users SET name=$1 WHERE id=$2 RETURNING *`,
+      [name, user.id]
+    );
+
+    user = updateResult.rows[0];
+  }
+}
+    
+    
 
     const token = jwt.sign(
       { id: user.id, role: user.role, mobile: user.mobile },

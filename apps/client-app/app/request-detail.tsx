@@ -1,9 +1,10 @@
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useAppContext } from "../context/AppContext";
 import { api } from "../services/api";
+import { router } from "expo-router";
 
 export default function RequestDetail() {
   const { id } = useLocalSearchParams();
@@ -109,6 +110,12 @@ export default function RequestDetail() {
         <Text style={styles.gold}>9881967899</Text>
         <Text style={styles.gold}>acubebconsultant@gmail.com</Text>
       </View>
+      <TouchableOpacity
+  style={styles.backButton}
+  onPress={() => router.replace("/(tabs)/requests")}
+>
+  <Text style={styles.backButtonText}>Back to Requests</Text>
+</TouchableOpacity>
     </ScrollView>
   );
 }
@@ -211,4 +218,17 @@ const styles = StyleSheet.create({
   timelineStatus: { color: "#FFF", fontSize: 16, fontWeight: "900" },
   meta: { color: "#888", fontSize: 12, marginTop: 3 },
   remarks: { color: "#AAA", marginTop: 5 },
+  backButton: {
+  backgroundColor: "#D4AF37",
+  padding: 15,
+  borderRadius: 14,
+  marginTop: 10,
+  marginBottom: 30,
+},
+backButtonText: {
+  color: "#111",
+  textAlign: "center",
+  fontWeight: "900",
+  fontSize: 16,
+},
 });
