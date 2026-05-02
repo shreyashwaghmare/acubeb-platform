@@ -1,6 +1,6 @@
 const { v4: uuidv4 } = require("uuid");
 const pool = require("../config/db");
-
+const { sendNotification } = require("../utils/sendNotification");
 /* ===================== CREATE REQUEST ===================== */
 
 exports.createRequest = async (req, res) => {
@@ -76,6 +76,8 @@ exports.getRequestById = async (req, res) => {
 
 /* ===================== UPDATE STATUS ===================== */
 
+/* ===================== UPDATE STATUS ===================== */
+
 exports.updateStatus = async (req, res) => {
   try {
     const { requestId, status, remarks } = req.body;
@@ -92,6 +94,40 @@ exports.updateStatus = async (req, res) => {
        VALUES ($1,$2,$3,$4,$5)`,
       [uuidv4(), requestId, status, req.user.role, remarks]
     );
+
+    // 🔔 Send notification when report is ready
+    if (
+      status === "REPORT_APPROVED" ||
+      status === "FINAL_REPORT_SHARED" ||
+      status === "COMPLETED"
+    ) {
+      try {
+        const requestData = await pool.query(
+          `SELECT user_id FROM service_requests WHERE id=$1`,
+          [requestId]
+        );
+
+        const userId = requestData.rows[0]?.user_id;
+
+        if (userId) {
+          const userData = await pool.query(
+            `SELECT expo_push_token FROM users WHERE id=$1`,
+            [userId]
+          );
+
+          const pushToken = userData.rows[0]?.expo_push_token;
+
+          if (pushToken) {
+            await sendNotification(
+              pushToken,
+              "Your report is ready. Tap to view."
+            );
+          }
+        }
+      } catch (notificationError) {
+        console.log("Notification trigger error:", notificationError);
+      }
+    }
 
     res.json({ success: true });
   } catch (error) {
