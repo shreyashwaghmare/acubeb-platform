@@ -134,7 +134,25 @@ export default function RequestDetail() {
       {isReportReady(request.status) && (
         <TouchableOpacity
           style={styles.reportButton}
-          onPress={() => router.push("/(tabs)/reports")}
+         onPress={async () => {
+  if (!user?.token) {
+    alert("Session expired. Please login again.");
+    return;
+  }
+
+  try {
+    const res = await api.getReportByRequestId(request.id, user.token);
+
+    if (res.success) {
+      router.push(`/report-detail?id=${res.data.id}`);
+    } else {
+      alert("Report not available yet");
+    }
+  } catch (e) {
+    console.log(e);
+    alert("Something went wrong");
+  }
+}}
         >
           <Text style={styles.reportButtonText}>View Final Report</Text>
         </TouchableOpacity>

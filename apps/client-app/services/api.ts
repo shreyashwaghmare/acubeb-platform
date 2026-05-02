@@ -90,4 +90,14 @@ getReportById: async (id: any, token: string) => {
 
   return res.json();
 },
+getReportByRequestId: async (requestId: string, token: string) => {
+  const res = await fetch(`${BASE_URL}/api/reports/request/${requestId}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return res.json();
+},
 };
