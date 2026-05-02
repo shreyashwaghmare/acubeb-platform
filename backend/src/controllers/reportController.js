@@ -5,7 +5,19 @@ exports.getReportById = async (req, res) => {
     const { id } = req.params;
 
     const result = await pool.query(
-      "SELECT * FROM reports WHERE id=$1",
+      `SELECT 
+        id,
+        report_no AS "reportNo",
+        service,
+        client,
+        project,
+        issue_date AS "issueDate",
+        status,
+        verification_code AS "verificationCode",
+        pdf_url AS "pdfUrl",
+        created_at AS "createdAt"
+      FROM reports
+      WHERE id = $1`,
       [id]
     );
 
@@ -22,6 +34,9 @@ exports.getReportById = async (req, res) => {
     });
   } catch (error) {
     console.error("GET REPORT ERROR:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
