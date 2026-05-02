@@ -100,4 +100,16 @@ getReportByRequestId: async (requestId: string, token: string) => {
 
   return res.json();
 },
+savePushToken: async (token: string, pushToken: string) => {
+  const res = await fetch(`${BASE_URL}/api/profile/save-push-token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ token: pushToken }),
+  });
+
+  return res.json();
+},
 };

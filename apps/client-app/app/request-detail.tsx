@@ -15,25 +15,30 @@ export default function RequestDetail() {
   const [loadingHistory, setLoadingHistory] = useState(false);
 
   useEffect(() => {
-    refreshRequests();
-  }, [id]);
+  const interval = setInterval(() => {
+    refreshAll();
+  }, 5000); // every 5 sec
 
-  useEffect(() => {
-    fetchTimeline();
-  }, [id, user?.token]);
+  return () => clearInterval(interval);
+}, [id, user?.token]);
 
   const fetchTimeline = async () => {
     if (!user?.token || !id) return;
 
+    const res = await api.getRequestHistory(user.token, String(id));
+
+    if (res.success) {
+      setTimeline(res.data || []);
+    }
+  };
+
+  const refreshAll = async () => {
     try {
       setLoadingHistory(true);
-      const res = await api.getRequestHistory(user.token, String(id));
-
-      if (res.success) {
-        setTimeline(res.data || []);
-      }
+      await refreshRequests();
+      await fetchTimeline();
     } catch (error) {
-      console.log("Timeline fetch error:", error);
+      console.log("Refresh all error:", error);
     } finally {
       setLoadingHistory(false);
     }
@@ -96,8 +101,10 @@ export default function RequestDetail() {
       <View style={styles.sectionHeader}>
         <Text style={styles.timelineHeading}>Status Timeline</Text>
 
-        <TouchableOpacity onPress={fetchTimeline}>
-          <Text style={styles.refreshText}>{loadingHistory ? "Refreshing..." : "Refresh"}</Text>
+        <TouchableOpacity onPress={refreshAll}>
+          <Text style={styles.refreshText}>
+            {loadingHistory ? "Refreshing..." : "Refresh"}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -131,32 +138,40 @@ export default function RequestDetail() {
         <Text style={styles.value}>{getNextStep(request.status)}</Text>
       </View>
 
-      {isReportReady(request.status) && (
-        <TouchableOpacity
-          style={styles.reportButton}
-         onPress={async () => {
-  if (!user?.token) {
-    alert("Session expired. Please login again.");
-    return;
-  }
+      <TouchableOpacity
+        style={[
+          styles.reportButton,
+          !isReportReady(request.status) && styles.disabledReportButton,
+        ]}
+        onPress={async () => {
+          if (!isReportReady(request.status)) {
+            alert("Report is not available yet.");
+            return;
+          }
 
-  try {
-    const res = await api.getReportByRequestId(request.id, user.token);
+          if (!user?.token) {
+            alert("Session expired. Please login again.");
+            return;
+          }
 
-    if (res.success) {
-      router.push(`/report-detail?id=${res.data.id}`);
-    } else {
-      alert("Report not available yet");
-    }
-  } catch (e) {
-    console.log(e);
-    alert("Something went wrong");
-  }
-}}
-        >
-          <Text style={styles.reportButtonText}>View Final Report</Text>
-        </TouchableOpacity>
-      )}
+          try {
+            const res = await api.getReportByRequestId(request.id, user.token);
+
+            if (res.success) {
+              router.push(`/report-detail?id=${res.data.id}`);
+            } else {
+              alert("Report not available yet");
+            }
+          } catch (e) {
+            console.log(e);
+            alert("Something went wrong");
+          }
+        }}
+      >
+        <Text style={styles.reportButtonText}>
+          {isReportReady(request.status) ? "View Final Report" : "Report Not Available Yet"}
+        </Text>
+      </TouchableOpacity>
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Support</Text>
@@ -256,13 +271,7 @@ function isReportReady(status: string) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#111", padding: 18 },
-
-  heading: {
-    color: "#D4AF37",
-    fontSize: 24,
-    fontWeight: "900",
-    marginVertical: 20,
-  },
+  heading: { color: "#D4AF37", fontSize: 24, fontWeight: "900", marginVertical: 20 },
 
   heroCard: {
     backgroundColor: "#1A1A1A",
@@ -295,20 +304,10 @@ const styles = StyleSheet.create({
     borderColor: "#2A2A2A",
   },
 
-  sectionTitle: {
-    color: "#D4AF37",
-    fontSize: 16,
-    fontWeight: "900",
-    marginBottom: 10,
-  },
-
-  infoRow: {
-    marginTop: 10,
-  },
-
+  sectionTitle: { color: "#D4AF37", fontSize: 16, fontWeight: "900", marginBottom: 10 },
+  infoRow: { marginTop: 10 },
   label: { color: "#777", fontSize: 12 },
   infoValue: { color: "#FFF", fontSize: 15, fontWeight: "700", marginTop: 4 },
-
   value: { color: "#FFF", fontSize: 15, fontWeight: "700", marginTop: 4 },
   gold: { color: "#D4AF37", fontWeight: "800", marginTop: 6 },
 
@@ -319,17 +318,8 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
 
-  timelineHeading: {
-    color: "#D4AF37",
-    fontSize: 18,
-    fontWeight: "900",
-  },
-
-  refreshText: {
-    color: "#D4AF37",
-    fontWeight: "800",
-    fontSize: 12,
-  },
+  timelineHeading: { color: "#D4AF37", fontSize: 18, fontWeight: "900" },
+  refreshText: { color: "#D4AF37", fontWeight: "800", fontSize: 12 },
 
   timelineCard: {
     backgroundColor: "#1A1A1A",
@@ -356,6 +346,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     marginBottom: 14,
   },
+
+  disabledReportButton: { backgroundColor: "#2A2A2A" },
 
   reportButtonText: {
     color: "#111",

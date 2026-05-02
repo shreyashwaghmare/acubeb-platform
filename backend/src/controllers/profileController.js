@@ -33,3 +33,19 @@ exports.updateProfile = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+exports.savePushToken = async (req, res) => {
+  try {
+    const userId = req.user.id; // from auth middleware
+    const { token } = req.body;
+
+    await pool.query(
+      "UPDATE users SET expo_push_token = $1 WHERE id = $2",
+      [token, userId]
+    );
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error("SAVE PUSH TOKEN ERROR:", e);
+    res.status(500).json({ success: false });
+  }
+};
