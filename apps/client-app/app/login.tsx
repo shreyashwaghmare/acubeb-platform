@@ -39,7 +39,7 @@ export default function LoginScreen() {
       const res = await api.login(mobile, name);
 
       if (res.success) {
-        await login(mobile, res.token, res.user?.name || name);
+        await login(res.user.mobile, res.token, res.user.name);
         router.replace("/(tabs)");
       } else {
         Alert.alert("Login Failed", res.message || "Please try again.");

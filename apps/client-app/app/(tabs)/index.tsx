@@ -10,7 +10,7 @@ export default function HomeScreen() {
       <Text style={styles.subtitle}>Smart Lab & Structural Consultancy</Text>
 
       <View style={styles.heroCard}>
-        <Text style={styles.heroTitle}>Welcome, {client.name}</Text>
+        <Text style={styles.heroTitle}>Welcome, {client.name || "Client"}</Text>
         <Text style={styles.heroText}>Track services, samples, reports and approvals in one place.</Text>
       </View>
 

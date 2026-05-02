@@ -2,48 +2,79 @@ const jwt = require("jsonwebtoken");
 const { v4: uuidv4 } = require("uuid");
 const pool = require("../config/db");
 
-exports.login = async (req, res) => {
-  try {
-    const { mobile,name } = req.body;
+const createToken = (user) => {
+  return jwt.sign(
+    { id: user.id, role: user.role, mobile: user.mobile },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+};
 
-    if (!mobile) {
-      return res.status(400).json({ success: false, message: "Mobile is required" });
+exports.register = async (req, res) => {
+  try {
+    const { name, mobile } = req.body;
+
+    if (!name || !mobile) {
+      return res.status(400).json({
+        success: false,
+        message: "Name and mobile are required",
+      });
     }
 
-    let userResult = await pool.query("SELECT * FROM users WHERE mobile=$1", [mobile]);
+    const existing = await pool.query("SELECT * FROM users WHERE mobile=$1", [mobile]);
 
-    let user;
+    if (existing.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "Mobile number already registered. Please login.",
+      });
+    }
 
-    if (userResult.rows.length === 0) {
-      const id = uuidv4();
+    const id = uuidv4();
 
-      const insertResult = await pool.query(
-        `INSERT INTO users (id, name, mobile, role)
-         VALUES ($1, $2, $3, $4)
-         RETURNING *`,
-        [id, "New Client", mobile, "client"]
-      );
-
-      user = insertResult.rows[0];
-    } else {
-      user = userResult.rows[0];
-      if (name && user.name === "New Client") {
-    const updateResult = await pool.query(
-      `UPDATE users SET name=$1 WHERE id=$2 RETURNING *`,
-      [name, user.id]
+    const result = await pool.query(
+      `INSERT INTO users (id, name, mobile, role)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [id, name, mobile, "client"]
     );
 
-    user = updateResult.rows[0];
+    const user = result.rows[0];
+    const token = createToken(user);
+
+    res.json({
+      success: true,
+      token,
+      user,
+    });
+  } catch (error) {
+    console.error("REGISTER ERROR:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
-}
-    
-    
+};
 
-    const token = jwt.sign(
-      { id: user.id, role: user.role, mobile: user.mobile },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+exports.login = async (req, res) => {
+  try {
+    const { mobile } = req.body;
+
+    if (!mobile) {
+      return res.status(400).json({
+        success: false,
+        message: "Mobile number is required",
+      });
+    }
+
+    const result = await pool.query("SELECT * FROM users WHERE mobile=$1", [mobile]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Mobile number not registered. Please register first.",
+      });
+    }
+
+    const user = result.rows[0];
+    const token = createToken(user);
 
     res.json({
       success: true,

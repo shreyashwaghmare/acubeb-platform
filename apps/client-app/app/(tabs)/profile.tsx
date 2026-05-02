@@ -12,7 +12,7 @@ export default function ProfileScreen() {
       <Text style={styles.heading}>Profile</Text>
 
       <View style={styles.card}>
-        <Text style={styles.name}>{client.name || "N/A"}</Text>
+        <Text style={styles.name}>{client.name || "Client"}</Text>
         <Text style={styles.sub}>Client Account</Text>
 
         <View style={styles.divider} />

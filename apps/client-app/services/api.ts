@@ -2,13 +2,24 @@
 // ⚠️ IMPORTANT: replace localhost with your IP
 
 export const api = {
+  register: async (name: string, mobile: string) => {
+  const res = await fetch(`${BASE_URL}/api/auth/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ name, mobile }),
+  });
+
+  return res.json();
+},
   login: async (mobile: string, name: string) => {
   const res = await fetch(`${BASE_URL}/api/auth/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ mobile, name }),
+    body: JSON.stringify({ mobile }),
   });
 
   return res.json();
