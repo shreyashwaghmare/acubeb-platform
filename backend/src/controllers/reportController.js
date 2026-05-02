@@ -40,3 +40,44 @@ exports.getReportById = async (req, res) => {
     });
   }
 };
+
+exports.getReportByRequestId = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+
+    const result = await pool.query(
+      `SELECT 
+        id,
+        report_no AS "reportNo",
+        service,
+        client,
+        project,
+        issue_date AS "issueDate",
+        status,
+        verification_code AS "verificationCode",
+        pdf_url AS "pdfUrl",
+        request_id AS "requestId"
+      FROM reports
+      WHERE request_id = $1`,
+      [requestId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No report found for this request",
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result.rows[0],
+    });
+  } catch (error) {
+    console.error("GET REPORT BY REQUEST ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
