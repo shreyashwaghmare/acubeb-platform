@@ -2,8 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { api } from "../services/api";
 
-/* ===================== TYPES ===================== */
-
 type RequestItem = {
   id: string;
   requestNo: string;
@@ -27,26 +25,35 @@ type AppContextType = {
   requests: RequestItem[];
   addRequest: () => void;
   refreshRequests: () => Promise<void>;
-
   client: ClientType;
   updateClient: (data: Partial<ClientType>) => void;
+  refreshClient: () => Promise<void>;
 };
 
-/* ===================== CONTEXT ===================== */
-
 const AppContext = createContext<AppContextType | null>(null);
-
-/* ===================== PROVIDER ===================== */
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
 
   const [requests, setRequests] = useState<RequestItem[]>([]);
-
   const [client, setClient] = useState<ClientType>({
     name: "Client",
     mobile: "",
   });
+
+  const refreshClient = async () => {
+    if (!user?.token) return;
+
+    try {
+      const res = await api.getProfile(user.token);
+
+      if (res.success && res.data) {
+        setClient(res.data);
+      }
+    } catch (error) {
+      console.log("Refresh client error:", error);
+    }
+  };
 
   const refreshRequests = async () => {
     if (!user?.token) return;
@@ -74,17 +81,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    refreshRequests();
-  }, [user]);
-
-  useEffect(() => {
-    if (!user?.token) return;
-
-    api.getProfile(user.token).then((res) => {
-      if (res.success) {
-        setClient(res.data);
-      }
-    });
+    if (user?.token) {
+      refreshClient();
+      refreshRequests();
+    } else {
+      setClient({ name: "Client", mobile: "" });
+      setRequests([]);
+    }
   }, [user]);
 
   const addRequest = () => {
@@ -106,14 +109,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         refreshRequests,
         client,
         updateClient,
+        refreshClient,
       }}
     >
       {children}
     </AppContext.Provider>
   );
 }
-
-/* ===================== HOOK ===================== */
 
 export function useAppContext() {
   const context = useContext(AppContext);

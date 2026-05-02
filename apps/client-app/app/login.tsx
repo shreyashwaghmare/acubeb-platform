@@ -1,10 +1,19 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+} from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { router } from "expo-router";
 import { api } from "../services/api";
 
 export default function LoginScreen() {
+  const [mode, setMode] = useState<"login" | "register">("login");
+
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [otp, setOtp] = useState("");
@@ -14,13 +23,13 @@ export default function LoginScreen() {
   const { login } = useAuth();
 
   const sendOtp = () => {
-    if (!name.trim()) {
-      Alert.alert("Missing Name", "Please enter your name or company name.");
+    if (mode === "register" && !name.trim()) {
+      Alert.alert("Enter Name");
       return;
     }
 
     if (mobile.length < 10) {
-      Alert.alert("Invalid Mobile", "Please enter valid mobile number.");
+      Alert.alert("Enter valid mobile number");
       return;
     }
 
@@ -29,23 +38,29 @@ export default function LoginScreen() {
 
   const verifyOtp = async () => {
     if (otp !== "1234") {
-      Alert.alert("Invalid OTP", "Use 1234 for demo login.");
+      Alert.alert("Invalid OTP", "Use 1234 for demo");
       return;
     }
 
     try {
       setLoading(true);
 
-      const res = await api.login(mobile, name);
+      let res;
+
+      if (mode === "register") {
+        res = await api.register(name, mobile);
+      } else {
+        res = await api.login(mobile);
+      }
 
       if (res.success) {
         await login(res.user.mobile, res.token, res.user.name);
         router.replace("/(tabs)");
       } else {
-        Alert.alert("Login Failed", res.message || "Please try again.");
+        Alert.alert("Error", res.message);
       }
     } catch (error) {
-      Alert.alert("Error", "Unable to login. Please check internet.");
+      Alert.alert("Error", "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -56,21 +71,48 @@ export default function LoginScreen() {
       <Text style={styles.logo}>A CUBE B</Text>
       <Text style={styles.subtitle}>Smart Lab Platform</Text>
 
+      {/* Toggle */}
+      <View style={styles.toggle}>
+        <TouchableOpacity
+          style={[styles.tab, mode === "login" && styles.activeTab]}
+          onPress={() => {
+            setMode("login");
+            setStep(1);
+          }}
+        >
+          <Text style={styles.tabText}>Login</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tab, mode === "register" && styles.activeTab]}
+          onPress={() => {
+            setMode("register");
+            setStep(1);
+          }}
+        >
+          <Text style={styles.tabText}>Register</Text>
+        </TouchableOpacity>
+      </View>
+
       {step === 1 ? (
         <>
-          <Text style={styles.label}>Name / Company Name</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter name or company name"
-            placeholderTextColor="#777"
-            value={name}
-            onChangeText={setName}
-          />
+          {mode === "register" && (
+            <>
+              <Text style={styles.label}>Name / Company</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter name"
+                placeholderTextColor="#777"
+                value={name}
+                onChangeText={setName}
+              />
+            </>
+          )}
 
           <Text style={styles.label}>Mobile Number</Text>
           <TextInput
             style={styles.input}
-            placeholder="Enter mobile number"
+            placeholder="Enter mobile"
             placeholderTextColor="#777"
             keyboardType="numeric"
             value={mobile}
@@ -100,12 +142,12 @@ export default function LoginScreen() {
             disabled={loading}
           >
             <Text style={styles.buttonText}>
-              {loading ? "Logging in..." : "Verify & Login"}
+              {loading ? "Processing..." : "Verify"}
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => setStep(1)}>
-            <Text style={styles.backText}>Change Details</Text>
+            <Text style={styles.back}>Change Details</Text>
           </TouchableOpacity>
         </>
       )}
@@ -114,22 +156,79 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#111", justifyContent: "center", padding: 20 },
-  logo: { color: "#D4AF37", fontSize: 34, fontWeight: "900", textAlign: "center" },
-  subtitle: { color: "#AAA", textAlign: "center", marginBottom: 30 },
-  label: { color: "#D4AF37", fontWeight: "800", marginBottom: 6 },
+  container: {
+    flex: 1,
+    backgroundColor: "#111",
+    justifyContent: "center",
+    padding: 20,
+  },
+  logo: {
+    color: "#D4AF37",
+    fontSize: 34,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  subtitle: {
+    color: "#AAA",
+    textAlign: "center",
+    marginBottom: 30,
+  },
+  toggle: {
+    flexDirection: "row",
+    backgroundColor: "#1B1B1B",
+    borderRadius: 14,
+    marginBottom: 20,
+  },
+  tab: {
+    flex: 1,
+    padding: 12,
+    alignItems: "center",
+  },
+  activeTab: {
+    backgroundColor: "#D4AF37",
+    borderRadius: 14,
+  },
+  tabText: {
+    color: "#FFF",
+    fontWeight: "800",
+  },
+  label: {
+    color: "#D4AF37",
+    fontWeight: "800",
+    marginBottom: 6,
+  },
   input: {
     backgroundColor: "#1B1B1B",
     color: "#FFF",
-    padding: 16,
+    padding: 15,
     borderRadius: 14,
-    marginBottom: 14,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: "#333",
   },
-  info: { color: "#AAA", marginBottom: 14, textAlign: "center" },
-  button: { backgroundColor: "#D4AF37", padding: 16, borderRadius: 14, marginTop: 8 },
-  disabled: { opacity: 0.6 },
-  buttonText: { textAlign: "center", fontWeight: "900", color: "#111" },
-  backText: { color: "#D4AF37", textAlign: "center", marginTop: 18, fontWeight: "800" },
+  info: {
+    color: "#AAA",
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  button: {
+    backgroundColor: "#D4AF37",
+    padding: 15,
+    borderRadius: 14,
+    marginTop: 10,
+  },
+  disabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    textAlign: "center",
+    fontWeight: "900",
+    color: "#111",
+  },
+  back: {
+    color: "#D4AF37",
+    textAlign: "center",
+    marginTop: 16,
+    fontWeight: "800",
+  },
 });

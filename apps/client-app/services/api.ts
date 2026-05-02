@@ -13,7 +13,7 @@ export const api = {
 
   return res.json();
 },
-  login: async (mobile: string, name: string) => {
+  login: async (mobile: string) => {
   const res = await fetch(`${BASE_URL}/api/auth/login`, {
     method: "POST",
     headers: {
@@ -73,6 +73,16 @@ export const api = {
   
   getRequestHistory: async (token: string, id: string) => {
   const res = await fetch(`${BASE_URL}/api/requests/${id}/history`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return res.json();
+},
+getReportById: async (id: any, token: string) => {
+  const res = await fetch(`${BASE_URL}/api/reports/${id}`, {
+    method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
     },

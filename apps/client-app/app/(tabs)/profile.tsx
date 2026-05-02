@@ -12,13 +12,13 @@ export default function ProfileScreen() {
       <Text style={styles.heading}>Profile</Text>
 
       <View style={styles.card}>
-        <Text style={styles.name}>{client.name || "Client"}</Text>
+        <Text style={styles.name}>{client?.name || "Client"}</Text>
         <Text style={styles.sub}>Client Account</Text>
 
         <View style={styles.divider} />
 
         <Text style={styles.label}>Mobile</Text>
-        <Text style={styles.value}>{client.mobile || "N/A"}</Text>
+        <Text style={styles.value}>{client?.mobile || "N/A"}</Text>
 
         <Text style={styles.label}>Email</Text>
         <Text style={styles.value}>{client.email || "Not added"}</Text>

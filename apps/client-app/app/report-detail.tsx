@@ -1,16 +1,45 @@
 import { useLocalSearchParams } from "expo-router";
-import { ScrollView, Text, View, TouchableOpacity, Alert, StyleSheet } from "react-native";
-import { reports } from "../data/mockData";
+import {
+  ScrollView,
+  Text,
+  View,
+  TouchableOpacity,
+  Alert,
+  StyleSheet,
+} from "react-native";
+import { useEffect, useState } from "react";
+import { api } from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import * as Linking from "expo-linking";
+import QRCode from "react-native-qrcode-svg";
 
 export default function ReportDetailScreen() {
   const { id } = useLocalSearchParams();
+  const { user } = useAuth();
 
-  const report = reports.find((item) => item.id === id);
+  const [report, setReport] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchReport = async () => {
+      if (!user?.token) return;
+
+      try {
+        const res = await api.getReportById(id, user.token);
+        if (res.success) {
+          setReport(res.data);
+        }
+      } catch (e) {
+        console.log("Report fetch error", e);
+      }
+    };
+
+    fetchReport();
+  }, [id]);
 
   if (!report) {
     return (
       <View style={styles.container}>
-        <Text style={styles.heading}>Report not found</Text>
+        <Text style={styles.heading}>Loading report...</Text>
       </View>
     );
   }
@@ -18,56 +47,171 @@ export default function ReportDetailScreen() {
   const verifyReport = () => {
     Alert.alert(
       "Report Verified",
-      `This report is VALID.\n\nReport No: ${report.reportNo}\nProject: ${report.project}\nVerified by: ${report.verifiedBy}`
+      `This report is VALID\n\nReport No: ${report.reportNo}`
     );
   };
 
+  const statusColor =
+    report.status === "Completed"
+      ? "#4CAF50"
+      : report.status === "Pending"
+      ? "#FF9800"
+      : "#D4AF37";
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}>
       <Text style={styles.heading}>Report Details</Text>
 
-      <View style={styles.card}>
-        <Text style={styles.gold}>{report.reportNo}</Text>
-        <Text style={styles.title}>{report.service}</Text>
-        <Text style={styles.text}>Client: {report.client}</Text>
-        <Text style={styles.text}>Project: {report.project}</Text>
-        <Text style={styles.text}>Issue Date: {report.issueDate}</Text>
-        <Text style={styles.status}>Status: {report.status}</Text>
+      {/* HERO */}
+      <View style={styles.hero}>
+        <Text style={styles.reportNo}>{report.reportNo}</Text>
+        <Text style={styles.service}>{report.service}</Text>
+
+        <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+          <Text style={styles.statusText}>{report.status}</Text>
+        </View>
       </View>
 
+      {/* DETAILS */}
+      <View style={styles.card}>
+        <Row label="Client" value={report.client} />
+        <Row label="Project" value={report.project} />
+        <Row label="Issue Date" value={report.issueDate} />
+      </View>
+
+      {/* QR */}
       <Text style={styles.section}>QR Verification</Text>
 
       <View style={styles.qrBox}>
-        <Text style={styles.qrText}>QR</Text>
-        <Text style={styles.small}>Scan to Verify Authenticity</Text>
+        <QRCode
+          value={report.verificationCode || "ACUBEB"}
+          size={140}
+          backgroundColor="#fff"
+        />
+        <Text style={styles.small}>Scan to verify authenticity</Text>
       </View>
 
+      {/* VERIFICATION */}
       <View style={styles.card}>
-        <Text style={styles.text}>Verification Code:</Text>
-        <Text style={styles.gold}>{report.verificationCode}</Text>
-        <Text style={styles.text}>This confirms the report exists in A Cube B secure database.</Text>
+        <Text style={styles.label}>Verification Code</Text>
+        <Text style={styles.code}>{report.verificationCode}</Text>
+        <Text style={styles.info}>
+          This report is securely stored in A Cube B database.
+        </Text>
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={verifyReport}>
-        <Text style={styles.buttonText}>Verify Report</Text>
+      {/* ACTIONS */}
+      <TouchableOpacity style={styles.primaryBtn} onPress={verifyReport}>
+        <Text style={styles.primaryText}>Verify Report</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.outlineButton}>
-        <Text style={styles.outlineText}>Download PDF Report</Text>
+      <TouchableOpacity
+        style={styles.secondaryBtn}
+        onPress={() => {
+          if (report.pdfUrl) {
+            Linking.openURL(report.pdfUrl);
+          } else {
+            Alert.alert("No PDF available");
+          }
+        }}
+      >
+        <Text style={styles.secondaryText}>Download PDF</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
+/* ---------- COMPONENT ---------- */
+
+function Row({ label, value }: any) {
+  return (
+    <View style={styles.row}>
+      <Text style={styles.rowLabel}>{label}</Text>
+      <Text style={styles.rowValue}>{value}</Text>
+    </View>
+  );
+}
+
+/* ---------- STYLES ---------- */
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#111", padding: 18 },
-  heading: { color: "#D4AF37", fontSize: 24, fontWeight: "900", marginVertical: 20 },
-  section: { color: "#D4AF37", fontSize: 18, fontWeight: "900", marginTop: 10, marginBottom: 10 },
-  card: { backgroundColor: "#1B1B1B", padding: 18, borderRadius: 16, marginBottom: 14 },
-  gold: { color: "#D4AF37", fontWeight: "900", marginTop: 6 },
-  title: { color: "#FFF", fontSize: 19, fontWeight: "900", marginTop: 6 },
-  text: { color: "#AAA", marginTop: 6 },
-  status: { color: "#90EE90", marginTop: 10, fontWeight: "900" },
+  container: {
+    flex: 1,
+    backgroundColor: "#111",
+    padding: 18,
+  },
+
+  heading: {
+    color: "#D4AF37",
+    fontSize: 24,
+    fontWeight: "900",
+    marginVertical: 20,
+  },
+
+  hero: {
+    backgroundColor: "#1A1A1A",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 14,
+  },
+
+  reportNo: {
+    color: "#D4AF37",
+    fontWeight: "800",
+  },
+
+  service: {
+    color: "#FFF",
+    fontSize: 18,
+    fontWeight: "900",
+    marginTop: 6,
+  },
+
+  statusBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+    marginTop: 10,
+  },
+
+  statusText: {
+    color: "#111",
+    fontWeight: "900",
+  },
+
+  card: {
+    backgroundColor: "#1A1A1A",
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+
+  rowLabel: {
+    color: "#777",
+    fontSize: 12,
+  },
+
+  rowValue: {
+    color: "#DDD",
+    fontSize: 12,
+  },
+
+  section: {
+    color: "#D4AF37",
+    fontSize: 18,
+    fontWeight: "900",
+    marginBottom: 10,
+  },
+
   qrBox: {
     backgroundColor: "#FFF",
     height: 180,
@@ -76,10 +220,53 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 14,
   },
-  qrText: { color: "#111", fontSize: 48, fontWeight: "900" },
-  small: { color: "#333", marginTop: 6, fontWeight: "700" },
-  button: { backgroundColor: "#D4AF37", padding: 15, borderRadius: 14, marginTop: 6 },
-  buttonText: { color: "#111", textAlign: "center", fontWeight: "900", fontSize: 16 },
-  outlineButton: { borderColor: "#D4AF37", borderWidth: 1, padding: 15, borderRadius: 14, marginTop: 12 },
-  outlineText: { color: "#D4AF37", textAlign: "center", fontWeight: "900" },
+
+  small: {
+    color: "#333",
+    marginTop: 6,
+  },
+
+  label: {
+    color: "#777",
+    fontSize: 12,
+  },
+
+  code: {
+    color: "#D4AF37",
+    fontSize: 16,
+    fontWeight: "900",
+    marginTop: 6,
+  },
+
+  info: {
+    color: "#AAA",
+    marginTop: 6,
+  },
+
+  primaryBtn: {
+    backgroundColor: "#D4AF37",
+    padding: 16,
+    borderRadius: 14,
+    marginTop: 10,
+  },
+
+  primaryText: {
+    color: "#111",
+    textAlign: "center",
+    fontWeight: "900",
+  },
+
+  secondaryBtn: {
+    borderWidth: 1,
+    borderColor: "#D4AF37",
+    padding: 16,
+    borderRadius: 14,
+    marginTop: 10,
+  },
+
+  secondaryText: {
+    color: "#D4AF37",
+    textAlign: "center",
+    fontWeight: "900",
+  },
 });
