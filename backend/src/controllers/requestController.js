@@ -120,6 +120,7 @@ exports.updateStatus = async (req, res) => {
           const pushToken = userData.rows[0]?.expo_push_token;
 
           if (pushToken) {
+            
             // 👉 Get reportId (IMPORTANT for deep linking)
             const reportData = await pool.query(
               `SELECT id FROM reports WHERE request_id = $1`,
@@ -127,7 +128,8 @@ exports.updateStatus = async (req, res) => {
             );
 
             const reportId = reportData.rows[0]?.id;
-
+            console.log("Push Token:", pushToken);
+console.log("Sending notification...");
             await sendNotification(
               pushToken,
               "Your report is ready. Tap to view.",
