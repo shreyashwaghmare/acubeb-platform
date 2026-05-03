@@ -8,7 +8,7 @@ export default function ProfileScreen() {
   const { logout } = useAuth();
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 150 }}>
       <Text style={styles.heading}>Profile</Text>
 
       <View style={styles.card}>

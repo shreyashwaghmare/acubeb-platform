@@ -10,7 +10,7 @@ export default function HomeScreen() {
   const completed = requests.filter(r => r.status === "Completed").length;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 150 }}>
       
       <Text style={styles.logo}>A CUBE B</Text>
       <Text style={styles.subtitle}>Smart Lab & Structural Consultancy</Text>

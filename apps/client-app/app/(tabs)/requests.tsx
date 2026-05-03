@@ -22,7 +22,7 @@ export default function RequestsScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={{ paddingBottom: 120 }}
+      contentContainerStyle={{ paddingBottom: 150 }}
     >
       <Text style={styles.heading}>My Requests</Text>
 

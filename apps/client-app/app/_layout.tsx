@@ -4,7 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-
+import * as Notifications from "expo-notifications";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { AppProvider } from "../context/AppContext";
@@ -40,6 +40,20 @@ function MainLayout() {
       router.replace("/(tabs)");
     }
   }, [loading, isLoggedIn, currentRoute]);
+  
+  useEffect(() => {
+  const sub = Notifications.addNotificationResponseReceivedListener(
+    (response) => {
+      const data = response.notification.request.content.data;
+
+      if (data?.screen === "report-detail" && data?.reportId) {
+        router.push(`/report-detail?id=${data.reportId}`);
+      }
+    }
+  );
+
+  return () => sub.remove();
+}, []);
 
   if (loading) {
     return null;

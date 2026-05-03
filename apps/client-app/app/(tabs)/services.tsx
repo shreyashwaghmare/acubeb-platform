@@ -3,7 +3,7 @@ import { services } from "../../data/mockData";
 import { router } from "expo-router";
 export default function ServicesScreen() {
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 120 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 150 }}>
       <Text style={styles.heading}>Apply New Service</Text>
 
       {services.map((service, index) => (

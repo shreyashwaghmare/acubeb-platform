@@ -7,7 +7,8 @@ const {
   getMyRequests,
   getRequestById,
   updateStatus,
-  getRequestHistory
+  getRequestHistory,
+  testApproveRequest,
 } = require("../controllers/requestController");
 
 router.post("/", authMiddleware, createRequest);
@@ -15,5 +16,5 @@ router.get("/", authMiddleware, getMyRequests);
 router.get("/:id", authMiddleware, getRequestById);
 router.post("/status", authMiddleware, updateStatus);
 router.get("/:id/history", authMiddleware, getRequestHistory);
-
+router.post("/test-approve/:requestId", authMiddleware, testApproveRequest);
 module.exports = router;

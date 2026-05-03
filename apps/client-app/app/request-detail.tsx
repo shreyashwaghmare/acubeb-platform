@@ -15,12 +15,12 @@ export default function RequestDetail() {
   const [loadingHistory, setLoadingHistory] = useState(false);
 
   useEffect(() => {
-  const interval = setInterval(() => {
-    refreshAll();
-  }, 5000); // every 5 sec
+    const interval = setInterval(() => {
+      refreshAll();
+    }, 5000); // every 5 sec
 
-  return () => clearInterval(interval);
-}, [id, user?.token]);
+    return () => clearInterval(interval);
+  }, [id, user?.token]);
 
   const fetchTimeline = async () => {
     if (!user?.token || !id) return;
@@ -74,7 +74,10 @@ export default function RequestDetail() {
   const statusColor = getStatusColor(request.status);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 120 }}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ paddingBottom: 120 }}
+    >
       <Text style={styles.heading}>Request Details</Text>
 
       <View style={styles.heroCard}>
@@ -82,7 +85,9 @@ export default function RequestDetail() {
         <Text style={styles.service}>{request.service}</Text>
 
         <View style={[styles.statusPill, { backgroundColor: statusColor }]}>
-          <Text style={styles.statusPillText}>{formatStatus(request.status)}</Text>
+          <Text style={styles.statusPillText}>
+            {formatStatus(request.status)}
+          </Text>
         </View>
       </View>
 
@@ -115,18 +120,27 @@ export default function RequestDetail() {
           return (
             <View key={index} style={styles.row}>
               <View style={styles.left}>
-                <View style={[styles.dot, { backgroundColor: getStatusColor(item.status) }]} />
+                <View
+                  style={[
+                    styles.dot,
+                    { backgroundColor: getStatusColor(item.status) },
+                  ]}
+                />
                 {!isLast && <View style={styles.line} />}
               </View>
 
               <View style={styles.right}>
-                <Text style={styles.timelineStatus}>{formatStatus(item.status)}</Text>
+                <Text style={styles.timelineStatus}>
+                  {formatStatus(item.status)}
+                </Text>
                 <Text style={styles.meta}>
                   Updated by {item.updated_by || "system"} •{" "}
                   {String(item.created_at || request.date).split("T")[0]}
                 </Text>
 
-                {item.remarks ? <Text style={styles.remarks}>{item.remarks}</Text> : null}
+                {item.remarks ? (
+                  <Text style={styles.remarks}>{item.remarks}</Text>
+                ) : null}
               </View>
             </View>
           );
@@ -169,7 +183,9 @@ export default function RequestDetail() {
         }}
       >
         <Text style={styles.reportButtonText}>
-          {isReportReady(request.status) ? "View Final Report" : "Report Not Available Yet"}
+          {isReportReady(request.status)
+            ? "View Final Report"
+            : "Report Not Available Yet"}
         </Text>
       </TouchableOpacity>
 
@@ -179,6 +195,28 @@ export default function RequestDetail() {
         <Text style={styles.gold}>9881967899</Text>
         <Text style={styles.gold}>acubebconsultant@gmail.com</Text>
       </View>
+      <TouchableOpacity
+        style={styles.reportButton}
+        onPress={async () => {
+          if (!user?.token) return;
+
+          const res = await fetch(
+            `https://acubeb-platform-production.up.railway.app/api/requests/test-approve/${request.id}`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${user.token}`,
+              },
+            },
+          );
+
+          const data = await res.json();
+          alert(data.success ? "Approved for testing" : data.message);
+          refreshAll();
+        }}
+      >
+        <Text style={styles.reportButtonText}>Test Approve Report</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.backButton}

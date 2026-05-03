@@ -102,6 +102,7 @@ exports.updateStatus = async (req, res) => {
       status === "COMPLETED"
     ) {
       try {
+        // 👉 Get user
         const requestData = await pool.query(
           `SELECT user_id FROM service_requests WHERE id=$1`,
           [requestId]
@@ -110,6 +111,7 @@ exports.updateStatus = async (req, res) => {
         const userId = requestData.rows[0]?.user_id;
 
         if (userId) {
+          // 👉 Get push token
           const userData = await pool.query(
             `SELECT expo_push_token FROM users WHERE id=$1`,
             [userId]
@@ -118,9 +120,18 @@ exports.updateStatus = async (req, res) => {
           const pushToken = userData.rows[0]?.expo_push_token;
 
           if (pushToken) {
+            // 👉 Get reportId (IMPORTANT for deep linking)
+            const reportData = await pool.query(
+              `SELECT id FROM reports WHERE request_id = $1`,
+              [requestId]
+            );
+
+            const reportId = reportData.rows[0]?.id;
+
             await sendNotification(
               pushToken,
-              "Your report is ready. Tap to view."
+              "Your report is ready. Tap to view.",
+              reportId // 👈 pass this
             );
           }
         }
@@ -152,6 +163,20 @@ exports.getRequestHistory = async (req, res) => {
       success: true,
       data: result.rows,
     });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.testApproveRequest = async (req, res) => {
+  try {
+    req.body = {
+      requestId: req.params.requestId,
+      status: "REPORT_APPROVED",
+      remarks: "Report approved for testing",
+    };
+
+    return exports.updateStatus(req, res);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

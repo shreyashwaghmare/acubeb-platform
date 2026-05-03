@@ -4,7 +4,7 @@ import { router } from "expo-router";
 
 export default function ReportsScreen() {
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 120 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 150 }}>
       <Text style={styles.heading}>Report History</Text>
 
       {reports.map((item) => (

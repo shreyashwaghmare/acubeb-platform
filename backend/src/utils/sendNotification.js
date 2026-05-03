@@ -1,4 +1,4 @@
-exports.sendNotification = async (expoPushToken, message) => {
+exports.sendNotification = async (expoPushToken, message, reportId) => {
   try {
     if (!expoPushToken) return;
 
@@ -14,6 +14,10 @@ exports.sendNotification = async (expoPushToken, message) => {
         sound: "default",
         title: "A Cube B Consultants",
         body: message,
+        data: {
+          screen: "report-detail",
+          reportId: reportId, // 👈 IMPORTANT
+        },
       }),
     });
 

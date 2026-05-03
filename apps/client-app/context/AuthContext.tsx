@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { registerForPushNotifications } from "../services/notifications";
 import { api } from "../services/api";
 
 type User = {
@@ -67,15 +66,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   setUser(userData);
 
-  // 🔔 REGISTER PUSH TOKEN
   try {
-    const pushToken = await registerForPushNotifications();
+    const Constants = (await import("expo-constants")).default;
 
-    if (pushToken) {
-      await api.savePushToken(token, pushToken);
+    if (Constants.executionEnvironment !== "storeClient") {
+      const { registerForPushNotifications } = await import("../services/notifications");
+
+      const pushToken = await registerForPushNotifications();
+
+      if (pushToken) {
+        await api.savePushToken(token, pushToken);
+      }
     }
   } catch (e) {
-    console.log("Push token error:", e);
+    console.log("Push notification skipped:", e);
   }
 };
 
