@@ -1,0 +1,30 @@
+node_modules
+# Dependency directories
+node_modules/
+
+# Expo/Mobile build artifacts
+.expo/
+dist/
+android/
+ios/
+*.jks
+*.p12
+*.key
+*.mobileprovision
+
+# Railway / Backend
+.railway/
+.env
+.env.local
+.env.production
+
+# IDEs and OS files
+.DS_Store
+.vscode/
+.idea/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+

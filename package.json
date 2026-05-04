@@ -5,6 +5,9 @@
     "apps/*",
     "backend"
   ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "client": "cd apps/client-app && npx expo start",
     "build:client": "eas build --path apps/client-app --platform android --profile preview"
