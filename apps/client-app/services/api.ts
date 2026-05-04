@@ -1,4 +1,4 @@
- const BASE_URL = "https://acubeb-platform-production.up.railway.app";
+ const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 // ⚠️ IMPORTANT: replace localhost with your IP
 
 export const api = {

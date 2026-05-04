@@ -56,6 +56,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (mobile: string, token: string, name = "Client") => {
+  console.log("🔐 LOGIN STARTED");
+
   await AsyncStorage.setItem(TOKEN_KEY, token);
 
   const userData = {
@@ -67,19 +69,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   setUser(userData);
 
   try {
-    const Constants = (await import("expo-constants")).default;
+    alert("Push registration starting");
 
-    if (Constants.executionEnvironment !== "storeClient") {
-      const { registerForPushNotifications } = await import("../services/notifications");
+    const { registerForPushNotifications } = await import("../services/notifications");
 
-      const pushToken = await registerForPushNotifications();
+    const pushToken = await registerForPushNotifications();
 
-      if (pushToken) {
-        await api.savePushToken(token, pushToken);
-      }
+    alert("Push token: " + String(pushToken));
+
+    if (pushToken) {
+      const res = await api.savePushToken(token, pushToken);
+      alert("Save token response: " + JSON.stringify(res));
+    } else {
+      alert("Push token is null");
     }
   } catch (e) {
-    console.log("Push notification skipped:", e);
+    alert("Push error: " + String(e));
+    console.log("🔥 Push notification error:", e);
   }
 };
 
