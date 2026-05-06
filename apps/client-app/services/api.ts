@@ -80,6 +80,17 @@ export const api = {
 
   return res.json();
 },
+getReports: async (token: string) => {
+  const res = await fetch(`${BASE_URL}/api/reports`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  return res.json();
+},
 getReportById: async (id: any, token: string) => {
   const res = await fetch(`${BASE_URL}/api/reports/${id}`, {
     method: "GET",

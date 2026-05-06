@@ -81,3 +81,38 @@ exports.getReportById = async (req, res) => {
   }
 };
 
+exports.getMyReports = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        r.id,
+        r.report_no AS "reportNo",
+        r.service,
+        r.client,
+        r.project,
+        r.issue_date AS "issueDate",
+        r.status,
+        r.verification_code AS "verificationCode",
+        r.pdf_url AS "pdfUrl",
+        r.request_id AS "requestId",
+        r.created_at AS "createdAt"
+      FROM reports r
+      INNER JOIN service_requests sr ON sr.id = r.request_id
+      WHERE sr.user_id = $1
+      ORDER BY r.created_at DESC`,
+      [req.user.id]
+    );
+
+    res.json({
+      success: true,
+      data: result.rows,
+    });
+  } catch (error) {
+    console.error("GET MY REPORTS ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
