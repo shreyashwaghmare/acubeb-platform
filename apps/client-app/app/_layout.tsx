@@ -1,11 +1,10 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import { DarkTheme, ThemeProvider } from "@react-navigation/native";
 import { Stack, router, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as Notifications from "expo-notifications";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { AppProvider } from "../context/AppContext";
 import { PremiumToastProvider } from "../components/PremiumToast";
@@ -25,65 +24,65 @@ export default function RootLayout() {
 }
 
 function MainLayout() {
-  const colorScheme = useColorScheme();
   const { user, loading } = useAuth();
   const segments = useSegments();
 
   const isLoggedIn = !!user?.token;
   const currentRoute = segments[0];
+  const isAuthScreen = currentRoute === "login";
 
   useEffect(() => {
     if (loading) return;
 
-    if (!isLoggedIn && currentRoute !== "login") {
+    if (!isLoggedIn && !isAuthScreen) {
       router.replace("/login");
+      return;
     }
 
-    if (isLoggedIn && currentRoute === "login") {
+    if (isLoggedIn && isAuthScreen) {
       router.replace("/(tabs)");
     }
-  }, [loading, isLoggedIn, currentRoute]);
-  
+  }, [loading, isLoggedIn, isAuthScreen]);
+
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const data = response.notification.request.content.data;
+
         if (data?.screen === "report-detail" && data?.reportId) {
-          router.push(`/report-detail?id=${data.reportId}`);
+          router.push({
+            pathname: "/report-detail",
+            params: {
+              id: String(data.reportId),
+            },
+          });
         }
       }
     );
+
     return () => sub.remove();
   }, []);
 
   if (loading) return null;
 
   return (
-    <ThemeProvider value={DarkTheme}> 
-      {/* FORCE DarkTheme for the 'Dubai' look. 
-        Standard grey system headers look cheap; 
-        OLED black is luxury.
-      */}
+    <ThemeProvider value={DarkTheme}>
       <Stack
         screenOptions={{
-          headerShown: false, // THIS REMOVES THE TOP NAMES (Home, Requests, etc.)
-          animation: "fade_from_bottom", // Premium transition
-          contentStyle: { backgroundColor: "#080808" } // Unified background
+          headerShown: false,
+          animation: "fade_from_bottom",
+          contentStyle: { backgroundColor: "#080808" },
         }}
       >
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-
-        {/* We set headerShown: false for ALL of these because 
-          we built custom Gold headers inside the actual files.
-        */}
+        <Stack.Screen name="login" />
+        <Stack.Screen name="(tabs)" />
         <Stack.Screen name="apply-service" />
         <Stack.Screen name="request-detail" />
         <Stack.Screen name="edit-profile" />
         <Stack.Screen name="report-detail" />
       </Stack>
 
-      <StatusBar style="light" /> 
+      <StatusBar style="light" />
     </ThemeProvider>
   );
 }

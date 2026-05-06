@@ -1,29 +1,80 @@
 const { v4: uuidv4 } = require("uuid");
 const pool = require("../config/db");
 const { sendNotification } = require("../utils/sendNotification");
+
 /* ===================== CREATE REQUEST ===================== */
 
 exports.createRequest = async (req, res) => {
   try {
-    const { service, project, site, contact_person, sample_qty, remarks } = req.body;
+    const {
+      service,
+      project,
+      site,
+      contact_person,
+      sample_qty,
+      remarks,
+    } = req.body;
 
     const id = uuidv4();
     const requestNo = `ACB-REQ-${Date.now().toString().slice(-6)}`;
 
-    // Insert request
+    // Create request
     const result = await pool.query(
       `INSERT INTO service_requests
-       (id, request_no, user_id, service, project, site, contact_person, sample_qty, remarks)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-       RETURNING *`,
-      [id, requestNo, req.user.id, service, project, site, contact_person, sample_qty, remarks]
+      (
+        id,
+        request_no,
+        user_id,
+        service,
+        project,
+        site,
+        contact_person,
+        sample_qty,
+        remarks
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      RETURNING
+        id,
+        request_no AS "requestNo",
+        service,
+        project,
+        site,
+        contact_person AS "contactPerson",
+        sample_qty AS "sampleQty",
+        remarks,
+        status,
+        created_at AS "date"`,
+      [
+        id,
+        requestNo,
+        req.user.id,
+        service,
+        project,
+        site,
+        contact_person,
+        sample_qty,
+        remarks,
+      ]
     );
 
-    // 🔥 Insert initial status (IMPORTANT)
+    // Insert initial history
     await pool.query(
-      `INSERT INTO request_status_history (id, request_id, status, updated_by)
-       VALUES ($1, $2, $3, $4)`,
-      [uuidv4(), id, "NEW_REQUEST", "client"]
+      `INSERT INTO request_status_history
+      (
+        id,
+        request_id,
+        status,
+        updated_by,
+        remarks
+      )
+      VALUES ($1,$2,$3,$4,$5)`,
+      [
+        uuidv4(),
+        id,
+        "NEW_REQUEST",
+        "client",
+        "Request created by client",
+      ]
     );
 
     res.json({
@@ -31,7 +82,12 @@ exports.createRequest = async (req, res) => {
       data: result.rows[0],
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.log("CREATE REQUEST ERROR:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -40,9 +96,20 @@ exports.createRequest = async (req, res) => {
 exports.getMyRequests = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT * FROM service_requests
-       WHERE user_id=$1
-       ORDER BY created_at DESC`,
+      `SELECT
+        id,
+        request_no AS "requestNo",
+        service,
+        project,
+        site,
+        contact_person AS "contactPerson",
+        sample_qty AS "sampleQty",
+        remarks,
+        status,
+        created_at AS "date"
+      FROM service_requests
+      WHERE user_id=$1
+      ORDER BY created_at DESC`,
       [req.user.id]
     );
 
@@ -51,7 +118,12 @@ exports.getMyRequests = async (req, res) => {
       data: result.rows,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.log("GET REQUESTS ERROR:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -60,21 +132,42 @@ exports.getMyRequests = async (req, res) => {
 exports.getRequestById = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT * FROM service_requests
-       WHERE id=$1 AND user_id=$2`,
+      `SELECT
+        id,
+        request_no AS "requestNo",
+        service,
+        project,
+        site,
+        contact_person AS "contactPerson",
+        sample_qty AS "sampleQty",
+        remarks,
+        status,
+        created_at AS "date"
+      FROM service_requests
+      WHERE id=$1 AND user_id=$2`,
       [req.params.id, req.user.id]
     );
+
+    if (!result.rows[0]) {
+      return res.status(404).json({
+        success: false,
+        message: "Request not found",
+      });
+    }
 
     res.json({
       success: true,
       data: result.rows[0],
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.log("GET REQUEST BY ID ERROR:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
-
-/* ===================== UPDATE STATUS ===================== */
 
 /* ===================== UPDATE STATUS ===================== */
 
@@ -82,69 +175,110 @@ exports.updateStatus = async (req, res) => {
   try {
     const { requestId, status, remarks } = req.body;
 
-    // Update main request status
+    if (!requestId || !status) {
+      return res.status(400).json({
+        success: false,
+        message: "requestId and status are required",
+      });
+    }
+
+    // Update request status
     await pool.query(
-      `UPDATE service_requests SET status=$1 WHERE id=$2`,
+      `UPDATE service_requests
+       SET status=$1
+       WHERE id=$2`,
       [status, requestId]
     );
 
-    // Insert into history
+    // Insert status history
     await pool.query(
-      `INSERT INTO request_status_history (id, request_id, status, updated_by, remarks)
-       VALUES ($1,$2,$3,$4,$5)`,
-      [uuidv4(), requestId, status, req.user.role, remarks]
+      `INSERT INTO request_status_history
+      (
+        id,
+        request_id,
+        status,
+        updated_by,
+        remarks
+      )
+      VALUES ($1,$2,$3,$4,$5)`,
+      [
+        uuidv4(),
+        requestId,
+        status,
+        req.user?.role || "admin",
+        remarks || "",
+      ]
     );
 
-    // 🔔 Send notification when report is ready
+    /* ===================== SEND PUSH NOTIFICATION ===================== */
+
     if (
       status === "REPORT_APPROVED" ||
       status === "FINAL_REPORT_SHARED" ||
       status === "COMPLETED"
     ) {
       try {
-        // 👉 Get user
+        // Get request owner
         const requestData = await pool.query(
-          `SELECT user_id FROM service_requests WHERE id=$1`,
+          `SELECT user_id
+           FROM service_requests
+           WHERE id=$1`,
           [requestId]
         );
 
         const userId = requestData.rows[0]?.user_id;
 
         if (userId) {
-          // 👉 Get push token
+          // Get user push token
           const userData = await pool.query(
-            `SELECT expo_push_token FROM users WHERE id=$1`,
+            `SELECT expo_push_token
+             FROM users
+             WHERE id=$1`,
             [userId]
           );
 
           const pushToken = userData.rows[0]?.expo_push_token;
 
           if (pushToken) {
-            
-            // 👉 Get reportId (IMPORTANT for deep linking)
+            // Get report ID for deep linking
             const reportData = await pool.query(
-              `SELECT id FROM reports WHERE request_id = $1`,
+              `SELECT id
+               FROM reports
+               WHERE request_id=$1`,
               [requestId]
             );
 
             const reportId = reportData.rows[0]?.id;
+
             console.log("Push Token:", pushToken);
-console.log("Sending notification...");
+            console.log("Report ID:", reportId);
+
             await sendNotification(
               pushToken,
               "Your report is ready. Tap to view.",
-              reportId // 👈 pass this
+              reportId
             );
           }
         }
       } catch (notificationError) {
-        console.log("Notification trigger error:", notificationError);
+        console.log(
+          "NOTIFICATION ERROR:",
+          notificationError
+        );
       }
     }
 
-    res.json({ success: true });
+    res.json({
+      success: true,
+      message: "Status updated successfully",
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.log("UPDATE STATUS ERROR:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -155,9 +289,16 @@ exports.getRequestHistory = async (req, res) => {
     const { id } = req.params;
 
     const result = await pool.query(
-      `SELECT * FROM request_status_history
-       WHERE request_id=$1
-       ORDER BY created_at ASC`,
+      `SELECT
+        id,
+        request_id AS "requestId",
+        status,
+        updated_by,
+        remarks,
+        created_at
+      FROM request_status_history
+      WHERE request_id=$1
+      ORDER BY created_at ASC`,
       [id]
     );
 
@@ -166,9 +307,16 @@ exports.getRequestHistory = async (req, res) => {
       data: result.rows,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.log("GET HISTORY ERROR:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
+
+/* ===================== TEST APPROVE REQUEST ===================== */
 
 exports.testApproveRequest = async (req, res) => {
   try {
@@ -180,6 +328,11 @@ exports.testApproveRequest = async (req, res) => {
 
     return exports.updateStatus(req, res);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.log("TEST APPROVE ERROR:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };

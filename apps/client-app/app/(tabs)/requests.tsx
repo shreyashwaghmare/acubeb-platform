@@ -1,69 +1,94 @@
-import { ScrollView, Text, View, StyleSheet, TouchableOpacity, RefreshControl, TextInput } from "react-native";
+import {
+  ScrollView,
+  Text,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  RefreshControl,
+  TextInput,
+} from "react-native";
 import { useAppContext } from "../../context/AppContext";
 import { router } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useState } from "react";
-import Animated, { FadeInDown, LinearTransition, useAnimatedStyle, withSpring } from "react-native-reanimated";
-import * as Haptics from 'expo-haptics';
+import Animated, {
+  FadeInDown,
+  LinearTransition,
+  useAnimatedStyle,
+} from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
 
 export default function RequestsScreen() {
   const { requests, refreshRequests } = useAppContext();
+
   const [refreshing, setRefreshing] = useState(false);
-  
-  // Search and Filter State
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("ALL");
+
   const filters = ["ALL", "PENDING", "TESTING", "COMPLETED"];
 
   useFocusEffect(
     useCallback(() => {
-      refreshRequests();
-    }, [])
+      const load = async () => {
+        try {
+          await refreshRequests();
+        } catch (e) {
+          console.log("REQUESTS REFRESH ERROR:", e);
+        }
+      };
+
+      load();
+    }, [refreshRequests])
   );
 
   const onRefresh = async () => {
-    setRefreshing(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await refreshRequests();
-    setRefreshing(false);
+    try {
+      setRefreshing(true);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await refreshRequests();
+    } catch (e) {
+      console.log("PULL REFRESH ERROR:", e);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
-  // Filtering Logic
-  const filteredRequests = (requests || []).filter((req) => {
-  // 1. Safe String Normalization
-  // We use ?? "" to ensure we are always working with a string, never null/undefined
-  const service = (req?.service ?? "").toLowerCase();
-  const requestNo = (req?.requestNo ?? "").toLowerCase();
-  const project = (req?.project ?? "").toLowerCase();
-  const status = (req?.status ?? "").toUpperCase();
+  const safeRequests = Array.isArray(requests) ? requests : [];
 
-  // 2. Safe Search Matching
-  const searchTerm = search.toLowerCase();
-  const matchesSearch =
-    service.includes(searchTerm) ||
-    requestNo.includes(searchTerm) ||
-    project.includes(searchTerm);
+  const filteredRequests = safeRequests.filter((req) => {
+    const service = String(req?.service || "").toLowerCase();
+    const requestNo = String(req?.requestNo || "").toLowerCase();
+    const project = String(req?.project || "").toLowerCase();
+    const status = String(req?.status || "").toUpperCase();
+    const searchTerm = search.toLowerCase();
 
-  // 3. Safe Filter Matching
-  const matchesFilter =
-    activeFilter === "ALL" ||
-    (activeFilter === "COMPLETED" && 
-      (status.includes("COMPLETED") || status.includes("SHARED") || status.includes("APPROVED"))) ||
-    (activeFilter === "TESTING" && 
-      (status.includes("TESTING") || status.includes("PROGRESS") || status.includes("VISIT"))) ||
-    (activeFilter === "PENDING" && 
-      status !== "" && // Ensure status actually exists
-      !status.includes("COMPLETED") && 
-      !status.includes("SHARED") && 
-      !status.includes("APPROVED") && 
-      !status.includes("TESTING") && 
-      !status.includes("PROGRESS"));
+    const matchesSearch =
+      service.includes(searchTerm) ||
+      requestNo.includes(searchTerm) ||
+      project.includes(searchTerm);
 
-  return matchesSearch && matchesFilter;
-});
+    const matchesFilter =
+      activeFilter === "ALL" ||
+      (activeFilter === "COMPLETED" &&
+        (status.includes("COMPLETED") ||
+          status.includes("SHARED") ||
+          status.includes("APPROVED"))) ||
+      (activeFilter === "TESTING" &&
+        (status.includes("TESTING") ||
+          status.includes("PROGRESS") ||
+          status.includes("VISIT"))) ||
+      (activeFilter === "PENDING" &&
+        !status.includes("COMPLETED") &&
+        !status.includes("SHARED") &&
+        !status.includes("APPROVED") &&
+        !status.includes("TESTING") &&
+        !status.includes("PROGRESS"));
+
+    return matchesSearch && matchesFilter;
+  });
+
   return (
     <View style={styles.container}>
-      {/* HEADER SECTION */}
       <View style={styles.topHeader}>
         <Text style={styles.metaLabel}>TRACKING & LOGISTICS</Text>
         <Text style={styles.heading}>Active Deployments</Text>
@@ -78,17 +103,33 @@ export default function RequestsScreen() {
           />
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterScroll}
+        >
           {filters.map((f) => (
             <TouchableOpacity
               key={f}
-              onPress={() => {
-                Haptics.selectionAsync();
+              onPress={async () => {
+                try {
+                  await Haptics.selectionAsync();
+                } catch {}
                 setActiveFilter(f);
               }}
-              style={[styles.filterChip, activeFilter === f && styles.filterChipActive]}
+              style={[
+                styles.filterChip,
+                activeFilter === f && styles.filterChipActive,
+              ]}
             >
-              <Text style={[styles.filterText, activeFilter === f && styles.filterTextActive]}>{f}</Text>
+              <Text
+                style={[
+                  styles.filterText,
+                  activeFilter === f && styles.filterTextActive,
+                ]}
+              >
+                {f}
+              </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -97,7 +138,13 @@ export default function RequestsScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 150 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#D4AF37" />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#D4AF37"
+          />
+        }
       >
         {filteredRequests.length === 0 ? (
           <View style={styles.emptyContainer}>
@@ -106,7 +153,11 @@ export default function RequestsScreen() {
           </View>
         ) : (
           filteredRequests.map((item, index) => (
-            <RequestCard key={item.id} item={item} index={index} />
+            <RequestCard
+              key={String(item?.id || index)}
+              item={item}
+              index={index}
+            />
           ))
         )}
       </ScrollView>
@@ -114,70 +165,81 @@ export default function RequestsScreen() {
   );
 }
 
-/* --- SUB-COMPONENT FOR CLEANER ANIMATION --- */
-
 function RequestCard({ item, index }: { item: any; index: number }) {
-  // 2026 Level: Individual spring animation for each progress bar
+  const status = String(item?.status || "PENDING");
+
   const animatedProgressStyle = useAnimatedStyle(() => ({
-  width: getProgressWidth(item.status),
-}));
+    width: getProgressWidth(status),
+  }));
+
+  const openDetail = async () => {
+    if (!item?.id) {
+      console.log("REQUEST ID MISSING:", item);
+      return;
+    }
+
+    try {
+      await Haptics.selectionAsync();
+    } catch {}
+
+    router.push({
+      pathname: "/request-detail",
+      params: { id: String(item.id) },
+    });
+  };
 
   return (
     <Animated.View
       entering={FadeInDown.delay(index * 50).springify()}
       layout={LinearTransition.springify()}
     >
-      <TouchableOpacity
-        activeOpacity={0.9}
-        style={styles.card}
-        onPress={() => {
-          Haptics.selectionAsync();
-          router.push({
-            pathname: "/request-detail",
-            params: { id: item.id },
-          });
-        }}
-      >
+      <TouchableOpacity activeOpacity={0.9} style={styles.card} onPress={openDetail}>
         <View style={styles.cardHeader}>
-          <Text style={styles.requestNo}>{item.requestNo}</Text>
+          <Text style={styles.requestNo}>
+            {item?.requestNo || "ACB-REQ"}
+          </Text>
+
           <View
             style={[
               styles.statusPill,
-              { backgroundColor: getStatusColor(item.status) + "15" },
+              { backgroundColor: getStatusColor(status) + "15" },
             ]}
           >
             <View
               style={[
                 styles.statusDot,
-                { backgroundColor: getStatusColor(item.status) },
+                { backgroundColor: getStatusColor(status) },
               ]}
             />
+
             <Text
               style={[
                 styles.statusText,
-                { color: getStatusColor(item.status) },
+                { color: getStatusColor(status) },
               ]}
             >
-              {String(item?.status ?? "PENDING")
-                .split("_")
-                .join(" ")
-                .toUpperCase()}
+              {status.split("_").join(" ").toUpperCase()}
             </Text>
           </View>
         </View>
 
-        <Text style={styles.title}>{item.service}</Text>
+        <Text style={styles.title}>
+          {item?.service || "Service Request"}
+        </Text>
 
         <View style={styles.bentoRow}>
           <View style={styles.bentoItem}>
             <Text style={styles.bentoLabel}>PROJECT</Text>
             <Text style={styles.bentoValue} numberOfLines={1}>
-              {item.project || "Unnamed Project"}
+              {item?.project || "Unnamed Project"}
             </Text>
           </View>
+
           <View style={styles.bentoItem}>
             <Text style={styles.bentoLabel}>SITE</Text>
-            <Text style={styles.bentoValue}>{item.site || "Global"}</Text>
+            <Text style={styles.bentoValue}>
+              {item?.site || "Global"}
+            </Text>
           </View>
         </View>
 
@@ -186,16 +248,15 @@ function RequestCard({ item, index }: { item: any; index: number }) {
             <Animated.View
               style={[
                 styles.progressBarFill,
-                { backgroundColor: getStatusColor(item.status) },
+                { backgroundColor: getStatusColor(status) },
                 animatedProgressStyle,
               ]}
             />
           </View>
+
           <View style={styles.progressLabels}>
             <Text style={styles.progressText}>Project Momentum</Text>
-            <Text style={styles.progressText}>
-              {getProgressWidth(item.status)}
-            </Text>
+            <Text style={styles.progressText}>{getProgressWidth(status)}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -203,9 +264,7 @@ function RequestCard({ item, index }: { item: any; index: number }) {
   );
 }
 
-/* --- LOGIC HELPERS --- */
-
-const getStatusColor = (status: string) => {
+const getStatusColor = (status?: string) => {
   const s = String(status || "").toUpperCase();
 
   if (
@@ -227,13 +286,10 @@ const getStatusColor = (status: string) => {
   return "#D4AF37";
 };
 
-const getProgressWidth = (status: string) => {
+const getProgressWidth = (status?: string) => {
   const s = String(status || "").toUpperCase();
 
-  if (
-    s.includes("COMPLETED") ||
-    s.includes("SHARED")
-  ) {
+  if (s.includes("COMPLETED") || s.includes("SHARED")) {
     return "100%";
   }
 
@@ -245,17 +301,12 @@ const getProgressWidth = (status: string) => {
     return "60%";
   }
 
-  if (
-    s.includes("VISIT") ||
-    s.includes("PROGRESS")
-  ) {
+  if (s.includes("VISIT") || s.includes("PROGRESS")) {
     return "40%";
   }
 
   return "15%";
 };
-
-/* --- STYLES --- */
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#080808", paddingHorizontal: 18 },
