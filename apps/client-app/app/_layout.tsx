@@ -15,9 +15,9 @@ export default function RootLayout() {
     <AuthProvider>
       <AppProvider>
         <PremiumToastProvider>
-        <SafeAreaProvider>
-          <MainLayout />
-        </SafeAreaProvider>
+          <SafeAreaProvider>
+            <MainLayout />
+          </SafeAreaProvider>
         </PremiumToastProvider>
       </AppProvider>
     </AuthProvider>
@@ -45,71 +45,45 @@ function MainLayout() {
   }, [loading, isLoggedIn, currentRoute]);
   
   useEffect(() => {
-  const sub = Notifications.addNotificationResponseReceivedListener(
-    (response) => {
-      const data = response.notification.request.content.data;
-
-      if (data?.screen === "report-detail" && data?.reportId) {
-        router.push(`/report-detail?id=${data.reportId}`);
+    const sub = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const data = response.notification.request.content.data;
+        if (data?.screen === "report-detail" && data?.reportId) {
+          router.push(`/report-detail?id=${data.reportId}`);
+        }
       }
-    }
-  );
+    );
+    return () => sub.remove();
+  }, []);
 
-  return () => sub.remove();
-}, []);
-
-  if (loading) {
-    return null;
-  }
+  if (loading) return null;
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack>
+    <ThemeProvider value={DarkTheme}> 
+      {/* FORCE DarkTheme for the 'Dubai' look. 
+        Standard grey system headers look cheap; 
+        OLED black is luxury.
+      */}
+      <Stack
+        screenOptions={{
+          headerShown: false, // THIS REMOVES THE TOP NAMES (Home, Requests, etc.)
+          animation: "fade_from_bottom", // Premium transition
+          contentStyle: { backgroundColor: "#080808" } // Unified background
+        }}
+      >
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
-        <Stack.Screen
-          name="apply-service"
-          options={{
-            headerShown: true,
-            title: "Apply Service",
-            headerStyle: { backgroundColor: "#0B0B0B" },
-            headerTintColor: "#D4AF37",
-          }}
-        />
-
-        <Stack.Screen
-          name="request-detail"
-          options={{
-            headerShown: true,
-            title: "Request Details",
-            headerStyle: { backgroundColor: "#0B0B0B" },
-            headerTintColor: "#D4AF37",
-          }}
-        />
-
-        <Stack.Screen
-          name="edit-profile"
-          options={{
-            headerShown: true,
-            title: "Edit Profile",
-            headerStyle: { backgroundColor: "#0B0B0B" },
-            headerTintColor: "#D4AF37",
-          }}
-        />
-
-        <Stack.Screen
-          name="report-detail"
-          options={{
-            headerShown: true,
-            title: "Report Details",
-            headerStyle: { backgroundColor: "#0B0B0B" },
-            headerTintColor: "#D4AF37",
-          }}
-        />
+        {/* We set headerShown: false for ALL of these because 
+          we built custom Gold headers inside the actual files.
+        */}
+        <Stack.Screen name="apply-service" />
+        <Stack.Screen name="request-detail" />
+        <Stack.Screen name="edit-profile" />
+        <Stack.Screen name="report-detail" />
       </Stack>
 
-      <StatusBar style="auto" />
+      <StatusBar style="light" /> 
     </ThemeProvider>
   );
 }

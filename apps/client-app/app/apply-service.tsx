@@ -8,15 +8,22 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  View,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useAppContext } from "../context/AppContext";
 import { usePremiumToast } from "../components/PremiumToast";
+import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
+import * as Haptics from 'expo-haptics';
 
 export default function ApplyServiceScreen() {
   const { service } = useLocalSearchParams();
   const { refreshRequests } = useAppContext();
   const { user } = useAuth();
   const { showToast } = usePremiumToast();
+
   const [projectName, setProjectName] = useState("");
   const [siteAddress, setSiteAddress] = useState("");
   const [contactPerson, setContactPerson] = useState("");
@@ -25,22 +32,17 @@ export default function ApplyServiceScreen() {
   const [loading, setLoading] = useState(false);
 
   const submitRequest = async () => {
-    console.log("SUBMIT CLICKED");
-
     if (!projectName || !siteAddress || !contactPerson) {
-      showToast("Please fill project name, site address and contact person.", "error");
-      return;
-    }
-
-    if (!user?.token) {
-      showToast("Session expired. Please login again.", "error");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      showToast("Deployment parameters incomplete.", "error");
       return;
     }
 
     try {
       setLoading(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      const res = await api.createRequest(user.token, {
+      const res = await api.createRequest(user?.token || "", {
         service: String(service),
         project: projectName,
         site: siteAddress,
@@ -49,72 +51,175 @@ export default function ApplyServiceScreen() {
         remarks,
       });
 
-      console.log("Create Request Response:", res);
-
       if (res.success) {
-        showToast("Request submitted successfully", "success");
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        showToast("Mission deployed successfully", "success");
         await refreshRequests();
         setTimeout(() => {
-        router.replace("/(tabs)/requests");
-      }, 500);
+          router.push("/(tabs)/requests");
+        }, 800);
       } else {
-        showToast(res.message || "Failed to create request", "error");
+        showToast(res.message || "Protocol failed", "error");
       }
     } catch (error) {
-      console.log("Create Request Error:", error);
-       showToast("Something went wrong while creating request.", "error");
+      showToast("System error during deployment.", "error");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 120 }}>
-      <Text style={styles.heading}>Apply Service</Text>
-      <Text style={styles.service}>{String(service)}</Text>
-
-      <TextInput style={styles.input} placeholder="Project Name" placeholderTextColor="#777" value={projectName} onChangeText={setProjectName} />
-      <TextInput style={styles.input} placeholder="Site Address" placeholderTextColor="#777" value={siteAddress} onChangeText={setSiteAddress} />
-      <TextInput style={styles.input} placeholder="Contact Person" placeholderTextColor="#777" value={contactPerson} onChangeText={setContactPerson} />
-      <TextInput style={styles.input} placeholder="Sample Quantity" placeholderTextColor="#777" keyboardType="numeric" value={sampleQty} onChangeText={setSampleQty} />
-
-      <TextInput
-        style={[styles.input, styles.textArea]}
-        placeholder="Remarks / Special Instructions"
-        placeholderTextColor="#777"
-        multiline
-        value={remarks}
-        onChangeText={setRemarks}
-      />
-
-      <TouchableOpacity
-        style={[styles.button, loading && styles.disabledButton]}
-        onPress={submitRequest}
-        disabled={loading}
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"} 
+      style={{ flex: 1 }}
+    >
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.buttonText}>
-          {loading ? "Submitting..." : "Submit Request"}
-        </Text>
-      </TouchableOpacity>
-    </ScrollView>
+        {/* TOP STATUS HEADER */}
+        <Animated.View entering={FadeInUp.delay(100)} style={styles.headerArea}>
+          <Text style={styles.metaLabel}>NEW DEPLOYMENT</Text>
+          <Text style={styles.serviceTitle}>{String(service)}</Text>
+          <View style={styles.statusBadge}>
+            <View style={styles.pulseDot} />
+            <Text style={styles.statusText}>AWAITING PARAMETERS</Text>
+          </View>
+        </Animated.View>
+
+        {/* FORM SECTION */}
+        <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.formCard}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>PROJECT IDENTIFICATION</Text>
+            <TextInput 
+              style={styles.input} 
+              placeholder="e.g. Skyline Residency Phase II" 
+              placeholderTextColor="#444" 
+              value={projectName} 
+              onChangeText={setProjectName} 
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>SITE GEO-LOCATION / ADDRESS</Text>
+            <TextInput 
+              style={styles.input} 
+              placeholder="Full site coordinates or address" 
+              placeholderTextColor="#444" 
+              value={siteAddress} 
+              onChangeText={setSiteAddress} 
+            />
+          </View>
+
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, { flex: 1.5, marginRight: 10 }]}>
+              <Text style={styles.inputLabel}>POC / CONTACT</Text>
+              <TextInput 
+                style={styles.input} 
+                placeholder="Name" 
+                placeholderTextColor="#444" 
+                value={contactPerson} 
+                onChangeText={setContactPerson} 
+              />
+            </View>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.inputLabel}>QTY</Text>
+              <TextInput 
+                style={styles.input} 
+                placeholder="Units" 
+                placeholderTextColor="#444" 
+                keyboardType="numeric" 
+                value={sampleQty} 
+                onChangeText={setSampleQty} 
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>SPECIAL INSTRUCTIONS / REMARKS</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Additional technical notes..."
+              placeholderTextColor="#444"
+              multiline
+              value={remarks}
+              onChangeText={setRemarks}
+            />
+          </View>
+        </Animated.View>
+
+        {/* SUBMIT BUTTON */}
+        <Animated.View entering={FadeInDown.delay(400)}>
+          <TouchableOpacity
+            style={[styles.button, loading && styles.disabledButton]}
+            onPress={submitRequest}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            {loading ? (
+              <ActivityIndicator color="#000" />
+            ) : (
+              <View style={styles.btnContent}>
+                <Text style={styles.buttonText}>SUBMIT REQUEST</Text>
+                <Text style={styles.btnIcon}>🚀</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          <Text style={styles.footerNote}>By initiating, you agree to technical audit protocols.</Text>
+        </Animated.View>
+
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#111", padding: 18 },
-  heading: { color: "#D4AF37", fontSize: 26, fontWeight: "900", marginTop: 20 },
-  service: { color: "#FFF", fontSize: 18, fontWeight: "800", marginTop: 8, marginBottom: 20 },
+  container: { flex: 1, backgroundColor: "#080808", padding: 18 },
+  scrollContent: { paddingBottom: 150 },
+  
+  // Header
+  headerArea: { marginTop: 40, marginBottom: 25 },
+  metaLabel: { color: "#555", fontSize: 10, fontWeight: "900", letterSpacing: 2 },
+  serviceTitle: { color: "#D4AF37", fontSize: 28, fontWeight: "900", marginTop: 5 },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', marginTop: 12, backgroundColor: '#111', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#1A1A1A' },
+  pulseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#D4AF37', marginRight: 8, opacity: 0.8 },
+  statusText: { color: '#888', fontSize: 9, fontWeight: '900', letterSpacing: 1 },
+
+  // Form Card
+  formCard: { backgroundColor: "#111", borderRadius: 28, padding: 20, borderWidth: 1, borderColor: "#1A1A1A", marginBottom: 25 },
+  inputGroup: { marginBottom: 20 },
+  inputLabel: { color: "#D4AF37", fontSize: 9, fontWeight: "900", letterSpacing: 1, marginBottom: 8, marginLeft: 4 },
+  row: { flexDirection: 'row' },
+  
   input: {
-    backgroundColor: "#1B1B1B",
+    backgroundColor: "#0C0C0C",
     color: "#FFF",
-    padding: 15,
-    borderRadius: 14,
-    marginBottom: 12,
+    padding: 16,
+    borderRadius: 18,
+    fontSize: 14,
+    fontWeight: '600',
     borderWidth: 1,
-    borderColor: "#333",
+    borderColor: "#1A1A1A",
   },
-  textArea: { height: 110, textAlignVertical: "top" },
-  button: { backgroundColor: "#D4AF37", padding: 15, borderRadius: 14, marginTop: 10 },
-  disabledButton: { opacity: 0.6 },
-  buttonText: { color: "#111", textAlign: "center", fontWeight: "900", fontSize: 16 },
+  textArea: { height: 100, textAlignVertical: "top" },
+
+  // Button
+  button: { 
+    backgroundColor: "#D4AF37", 
+    height: 60, 
+    borderRadius: 20, 
+    justifyContent: "center", 
+    alignItems: "center",
+    shadowColor: "#D4AF37",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+  },
+  btnContent: { flexDirection: 'row', alignItems: 'center' },
+  disabledButton: { opacity: 0.5 },
+  buttonText: { color: "#000", fontWeight: "900", fontSize: 15, letterSpacing: 1 },
+  btnIcon: { marginLeft: 10, fontSize: 18 },
+  
+  footerNote: { color: "#444", fontSize: 10, textAlign: 'center', marginTop: 15, fontWeight: '600' }
 });
