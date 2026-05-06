@@ -8,14 +8,17 @@ import * as Notifications from "expo-notifications";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { AppProvider } from "../context/AppContext";
+import { PremiumToastProvider } from "../components/PremiumToast";
 
 export default function RootLayout() {
   return (
     <AuthProvider>
       <AppProvider>
+        <PremiumToastProvider>
         <SafeAreaProvider>
           <MainLayout />
         </SafeAreaProvider>
+        </PremiumToastProvider>
       </AppProvider>
     </AuthProvider>
   );

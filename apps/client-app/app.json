@@ -2,7 +2,7 @@
   "expo": {
     "name": "A Cube B Smart App",
     "slug": "acubeb-client",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "acubeb",
@@ -14,6 +14,7 @@
     },
     "android": {
       "package": "com.acubeb.client",
+      "googleServicesFile": "./google-services.json",
       "allowBackup": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
@@ -31,7 +32,14 @@
       "backgroundColor": "#111111"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png", 
+          "color": "#D4AF37"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -41,6 +49,13 @@
       "eas": {
         "projectId": "b9f4efd4-168a-4803-bce0-52731da57b3e"
       }
+    },
+    "owner": "shreyash.waghmare",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/b9f4efd4-168a-4803-bce0-52731da57b3e"
     }
   }
 }

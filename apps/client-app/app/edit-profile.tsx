@@ -4,16 +4,16 @@ import { useAppContext } from "../context/AppContext";
 import { router } from "expo-router";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
-import { Alert } from "react-native";
+import { usePremiumToast } from "../components/PremiumToast";
 
 export default function EditProfile() {
   const { client, updateClient } = useAppContext();
   const { user } = useAuth();
   const [form, setForm] = useState(client);
-
+   const { showToast } = usePremiumToast();
   const save = async () => {
   if (!user?.token) {
-    Alert.alert("Session expired. Please login again.");
+   showToast("Session expired. Please login again.", "error");
     return;
   }
 
@@ -27,14 +27,16 @@ export default function EditProfile() {
 
     if (res.success) {
       updateClient(res.data); // update UI instantly
-      Alert.alert("Success", "Profile updated successfully");
-      router.back();
+      showToast("Session expired. Please login again.", "error");
+      setTimeout(() => {
+        router.back();
+      }, 500);
     } else {
-      Alert.alert("Error", "Failed to update profile");
+      showToast("Failed to update profile", "error");
     }
   } catch (error) {
     console.log(error);
-    Alert.alert("Error", "Something went wrong");
+    showToast("Something went wrong", "error");
   }
 };
 

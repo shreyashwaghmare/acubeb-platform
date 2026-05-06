@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "948204597159",
+    "project_id": "acubeb-platform",
+    "storage_bucket": "acubeb-platform.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:948204597159:android:b5676aaff3f81babbd9082",
+        "android_client_info": {
+          "package_name": "com.acubeb.client"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBglURryOtB33ZUt-atyQV3twiTrkPwVwg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useAppContext } from "../context/AppContext";
 import { api } from "../services/api";
+import { usePremiumToast } from "../components/PremiumToast";
 
 export default function RequestDetail() {
   const { id } = useLocalSearchParams();
   const { user } = useAuth();
   const { requests, refreshRequests } = useAppContext();
-
+  const { showToast } = usePremiumToast();
   const request = requests.find((item) => item.id === String(id));
   const [timeline, setTimeline] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -159,12 +160,12 @@ export default function RequestDetail() {
         ]}
         onPress={async () => {
           if (!isReportReady(request.status)) {
-            alert("Report is not available yet.");
+            showToast("Report is not available yet", "info");
             return;
           }
 
           if (!user?.token) {
-            alert("Session expired. Please login again.");
+            showToast("Session expired. Please login again.", "error");
             return;
           }
 
@@ -172,13 +173,16 @@ export default function RequestDetail() {
             const res = await api.getReportByRequestId(request.id, user.token);
 
             if (res.success) {
-              router.push(`/report-detail?id=${res.data.id}`);
+              showToast("Opening your report...", "success");
+              setTimeout(() => {
+      router.push(`/report-detail?id=${res.data.id}`);
+    }, 400);
             } else {
-              alert("Report not available yet");
+              showToast("Report not available yet", "info");
             }
           } catch (e) {
             console.log(e);
-            alert("Something went wrong");
+            showToast("Something went wrong", "error");
           }
         }}
       >
@@ -210,8 +214,8 @@ export default function RequestDetail() {
             },
           );
 
-          const data = await res.json();
-          alert(data.success ? "Approved for testing" : data.message);
+           await res.json();
+          
           refreshAll();
         }}
       >
@@ -388,11 +392,12 @@ const styles = StyleSheet.create({
   disabledReportButton: { backgroundColor: "#2A2A2A" },
 
   reportButtonText: {
-    color: "#111",
-    textAlign: "center",
-    fontWeight: "900",
-    fontSize: 16,
-  },
+  color: "#111",
+  textAlign: "center",
+  fontWeight: "900",
+  fontSize: 16,
+  letterSpacing: 0.5,
+},
 
   backButton: {
     backgroundColor: "#D4AF37",

@@ -3,7 +3,6 @@ import { api } from "../services/api";
 import { useLocalSearchParams, router } from "expo-router";
 import { useState } from "react";
 import {
-  Alert,
   ScrollView,
   Text,
   TextInput,
@@ -11,12 +10,13 @@ import {
   StyleSheet,
 } from "react-native";
 import { useAppContext } from "../context/AppContext";
+import { usePremiumToast } from "../components/PremiumToast";
 
 export default function ApplyServiceScreen() {
   const { service } = useLocalSearchParams();
   const { refreshRequests } = useAppContext();
   const { user } = useAuth();
-
+  const { showToast } = usePremiumToast();
   const [projectName, setProjectName] = useState("");
   const [siteAddress, setSiteAddress] = useState("");
   const [contactPerson, setContactPerson] = useState("");
@@ -28,12 +28,12 @@ export default function ApplyServiceScreen() {
     console.log("SUBMIT CLICKED");
 
     if (!projectName || !siteAddress || !contactPerson) {
-      Alert.alert("Missing Details", "Please fill project name, site address and contact person.");
+      showToast("Please fill project name, site address and contact person.", "error");
       return;
     }
 
     if (!user?.token) {
-      Alert.alert("Session expired", "Please login again.");
+      showToast("Session expired. Please login again.", "error");
       return;
     }
 
@@ -52,15 +52,17 @@ export default function ApplyServiceScreen() {
       console.log("Create Request Response:", res);
 
       if (res.success) {
+        showToast("Request submitted successfully", "success");
         await refreshRequests();
-        Alert.alert("Success", "Request created successfully");
+        setTimeout(() => {
         router.replace("/(tabs)/requests");
+      }, 500);
       } else {
-        Alert.alert("Error", res.message || "Failed to create request");
+        showToast(res.message || "Failed to create request", "error");
       }
     } catch (error) {
       console.log("Create Request Error:", error);
-      Alert.alert("Error", "Something went wrong while creating request.");
+       showToast("Something went wrong while creating request.", "error");
     } finally {
       setLoading(false);
     }

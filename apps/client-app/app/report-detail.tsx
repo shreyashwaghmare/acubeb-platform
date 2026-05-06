@@ -4,7 +4,6 @@ import {
   Text,
   View,
   TouchableOpacity,
-  Alert,
   StyleSheet,
 } from "react-native";
 import { useEffect, useState } from "react";
@@ -12,11 +11,12 @@ import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import * as Linking from "expo-linking";
 import QRCode from "react-native-qrcode-svg";
+import { usePremiumToast } from "../components/PremiumToast";
 
 export default function ReportDetailScreen() {
   const { id } = useLocalSearchParams();
   const { user } = useAuth();
-
+  const { showToast } = usePremiumToast();
   const [report, setReport] = useState<any>(null);
 
   useEffect(() => {
@@ -45,10 +45,7 @@ export default function ReportDetailScreen() {
   }
 
   const verifyReport = () => {
-    Alert.alert(
-      "Report Verified",
-      `This report is VALID\n\nReport No: ${report.reportNo}`
-    );
+    showToast(`Report ${report.reportNo} verified successfully`, "success");
   };
 
   const statusColor =
@@ -111,7 +108,7 @@ export default function ReportDetailScreen() {
           if (report.pdfUrl) {
             Linking.openURL(report.pdfUrl);
           } else {
-            Alert.alert("No PDF available");
+            showToast("PDF not available yet", "info");
           }
         }}
       >

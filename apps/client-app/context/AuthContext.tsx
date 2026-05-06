@@ -56,39 +56,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (mobile: string, token: string, name = "Client") => {
-  console.log("🔐 LOGIN STARTED");
+    console.log("🔐 LOGIN STARTED");
 
-  await AsyncStorage.setItem(TOKEN_KEY, token);
+    try {
+      // 1. Save Token to Storage
+      await AsyncStorage.setItem(TOKEN_KEY, token);
 
-  const userData = {
-    mobile,
-    token,
-    name,
-  };
+      // 2. Update User State (This is what updates the UI)
+      const userData = { mobile, token, name };
+      setUser(userData);
 
-  setUser(userData);
+      // 3. Handle Push Notifications (Silent background process)
+      try {
+        const { registerForPushNotifications } = await import("../services/notifications");
+        const pushToken = await registerForPushNotifications();
 
-  try {
-    alert("Push registration starting");
+        if (pushToken) {
+          await api.savePushToken(token, pushToken);
+          console.log("✅ Push token saved successfully");
+        }
+      } catch (pushError) {
+        // We log it but DON'T alert, so the user can still use the app
+        console.log("⚠️ Push registration skipped:", pushError);
+      }
 
-    const { registerForPushNotifications } = await import("../services/notifications");
-
-    const pushToken = await registerForPushNotifications();
-
-    alert("Push token: " + String(pushToken));
-
-    if (pushToken) {
-      const res = await api.savePushToken(token, pushToken);
-      alert("Save token response: " + JSON.stringify(res));
-    } else {
-      alert("Push token is null");
+      console.log("✅ LOGIN SUCCESSFUL");
+    } catch (e) {
+      console.error("🔥 Critical Login Error:", e);
+      // Re-throw so the Login screen's 'Something went wrong' shows only on REAL failures
+      throw e; 
     }
-  } catch (e) {
-    alert("Push error: " + String(e));
-    console.log("🔥 Push notification error:", e);
-  }
-};
-
+  };
   const logout = async () => {
     await AsyncStorage.removeItem(TOKEN_KEY);
     setUser(null);

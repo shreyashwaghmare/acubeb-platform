@@ -41,11 +41,10 @@ export async function registerForPushNotifications() {
     }
 
     // 🔥 GET PROJECT ID (IMPORTANT)
-    const projectId =
-      Constants.expoConfig?.extra?.eas?.projectId ||
-      Constants.easConfig?.projectId;
+    // 🔥 GET PROJECT ID (STRICT SDK 54 WAY)
+    const projectId = "b9f4efd4-168a-4803-bce0-52731da57b3e"; // Explicitly paste your ID from the build page
 
-    console.log("📦 Project ID:", projectId);
+    console.log("📦 Using Project ID:", projectId);
 
     if (!projectId) {
       console.log("❌ Missing projectId");
@@ -64,8 +63,13 @@ export async function registerForPushNotifications() {
     console.log("✅ Final Push Token:", token);
 
     return token;
-  } catch (error) {
-    console.log("🔥 Push registration error:", error);
-    return null;
-  }
+  } catch (error: unknown) {
+  // 1. Check if it's a standard Error object
+  if (error instanceof Error) {
+  } 
+  // 2. Fallback for weird errors (like strings)
+  
+  console.log("🔥 Push registration error:", error);
+  return null;
+}
 }

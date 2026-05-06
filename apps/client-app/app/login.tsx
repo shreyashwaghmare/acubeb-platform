@@ -5,15 +5,15 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { router } from "expo-router";
 import { api } from "../services/api";
+import { usePremiumToast } from "../components/PremiumToast";
 
 export default function LoginScreen() {
   const [mode, setMode] = useState<"login" | "register">("login");
-
+  const { showToast } = usePremiumToast();
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [otp, setOtp] = useState("");
@@ -24,12 +24,12 @@ export default function LoginScreen() {
 
   const sendOtp = () => {
     if (mode === "register" && !name.trim()) {
-      Alert.alert("Enter Name");
+      showToast("Please enter your name", "error");
       return;
     }
 
     if (mobile.length < 10) {
-      Alert.alert("Enter valid mobile number");
+      showToast("Enter a valid mobile number", "error");
       return;
     }
 
@@ -38,7 +38,7 @@ export default function LoginScreen() {
 
   const verifyOtp = async () => {
     if (otp !== "1234") {
-      Alert.alert("Invalid OTP", "Use 1234 for demo");
+      showToast("Invalid OTP (use 1234)", "error");
       return;
     }
 
@@ -54,13 +54,17 @@ export default function LoginScreen() {
       }
 
       if (res.success) {
+        showToast("Welcome to A Cube B", "success");
         await login(res.user.mobile, res.token, res.user.name);
-        router.replace("/(tabs)");
+        setTimeout(() => {
+    router.replace("/(tabs)");
+  }, 500);
       } else {
-        Alert.alert("Error", res.message);
+        showToast(res.message || "Something went wrong", "error");
       }
-    } catch (error) {
-      Alert.alert("Error", "Something went wrong");
+    } catch (error:any) {
+      showToast(error.message || "Unexpected error occurred", "error");
+  console.log("🔥 Full Error:", error);
     } finally {
       setLoading(false);
     }
