@@ -1,8 +1,14 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import { useAuth } from "./AuthContext";
 import { api } from "../services/api";
 
-type RequestItem = {
+export type RequestItem = {
   id: string;
   requestNo: string;
   service: string;
@@ -41,44 +47,65 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     mobile: "",
   });
 
-  const refreshClient = async () => {
-    if (!user?.token) return;
-
+  const refreshClient = useCallback(async () => {
     try {
-      const res = await api.getProfile(user.token);
+      if (!user?.token) {
+        setClient({ name: "Client", mobile: "" });
+        return;
+      }
 
-      if (res.success && res.data) {
-        setClient(res.data);
+      const res = await api.getProfile(user.token);
+      console.log("GET REQUESTS RESPONSE:", res);
+      if (res?.success && res?.data) {
+        setClient({
+          name: res.data.name || "Client",
+          mobile: res.data.mobile || "",
+          email: res.data.email || "",
+          gst: res.data.gst || "",
+          address: res.data.address || "",
+        });
       }
     } catch (error) {
-      console.log("Refresh client error:", error);
+      console.log("REFRESH CLIENT ERROR:", error);
     }
-  };
+  }, [user?.token]);
 
-  const refreshRequests = async () => {
-    if (!user?.token) return;
-
+  const refreshRequests = useCallback(async () => {
     try {
+      if (!user?.token) {
+        setRequests([]);
+        return;
+      }
+
       const res = await api.getRequests(user.token);
 
-      if (res.success && Array.isArray(res.data)) {
-        const formatted = res.data.map((item: any) => ({
-          id: item.id,
-          requestNo: item.request_no,
-          service: item.service,
-          project: item.project,
-          site: item.site,
-          status: item.status,
-          date: item.created_at?.split("T")[0],
+      if (res?.success && Array.isArray(res.data)) {
+        const formatted: RequestItem[] = res.data.map((item: any) => ({
+          id: String(item?.id || ""),
+          requestNo: String(item?.requestNo || item?.request_no || "ACB-REQ"),
+          service: String(item?.service || "Service Request"),
+          project: String(item?.project || "Unnamed Project"),
+          site: String(item?.site || "Pending Update"),
+          status: String(item?.status || "NEW_REQUEST"),
+          date: String(
+            item?.date
+              ? String(item.date).split("T")[0]
+              : item?.created_at
+              ? String(item.created_at).split("T")[0]
+              : new Date().toISOString().split("T")[0]
+          ),
           timeline: ["Request Submitted"],
         }));
 
         setRequests(formatted);
+      } else {
+        setRequests([]);
       }
     } catch (error) {
-      console.log("Refresh requests error:", error);
+      console.log("REFRESH REQUESTS ERROR:", error);
+      setRequests([]);
     }
-  };
+  }, [user?.token]);
 
   useEffect(() => {
     if (user?.token) {
@@ -88,7 +115,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setClient({ name: "Client", mobile: "" });
       setRequests([]);
     }
-  }, [user]);
+  }, [user?.token, refreshClient, refreshRequests]);
 
   const addRequest = () => {
     // Backend-driven now
@@ -119,8 +146,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
 export function useAppContext() {
   const context = useContext(AppContext);
+
   if (!context) {
     throw new Error("useAppContext must be used inside AppProvider");
   }
+
   return context;
 }
