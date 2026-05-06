@@ -29,23 +29,38 @@ export default function RequestsScreen() {
   };
 
   // Filtering Logic
-  const filteredRequests = requests.filter((req) => {
-    const matchesSearch =
-      req.service.toLowerCase().includes(search.toLowerCase()) ||
-      req.requestNo.toLowerCase().includes(search.toLowerCase()) ||
-      (req.project || "").toLowerCase().includes(search.toLowerCase());
+  const filteredRequests = (requests || []).filter((req) => {
+  // 1. Safe String Normalization
+  // We use ?? "" to ensure we are always working with a string, never null/undefined
+  const service = (req?.service ?? "").toLowerCase();
+  const requestNo = (req?.requestNo ?? "").toLowerCase();
+  const project = (req?.project ?? "").toLowerCase();
+  const status = (req?.status ?? "").toUpperCase();
 
-    const status = req.status.toUpperCase();
+  // 2. Safe Search Matching
+  const searchTerm = search.toLowerCase();
+  const matchesSearch =
+    service.includes(searchTerm) ||
+    requestNo.includes(searchTerm) ||
+    project.includes(searchTerm);
 
-    const matchesFilter =
-      activeFilter === "ALL" ||
-      (activeFilter === "COMPLETED" && (status.includes("COMPLETED") || status.includes("SHARED") || status.includes("APPROVED"))) ||
-      (activeFilter === "TESTING" && (status.includes("TESTING") || status.includes("PROGRESS") || status.includes("VISIT"))) ||
-      (activeFilter === "PENDING" && !status.includes("COMPLETED") && !status.includes("SHARED") && !status.includes("APPROVED") && !status.includes("TESTING") && !status.includes("PROGRESS"));
+  // 3. Safe Filter Matching
+  const matchesFilter =
+    activeFilter === "ALL" ||
+    (activeFilter === "COMPLETED" && 
+      (status.includes("COMPLETED") || status.includes("SHARED") || status.includes("APPROVED"))) ||
+    (activeFilter === "TESTING" && 
+      (status.includes("TESTING") || status.includes("PROGRESS") || status.includes("VISIT"))) ||
+    (activeFilter === "PENDING" && 
+      status !== "" && // Ensure status actually exists
+      !status.includes("COMPLETED") && 
+      !status.includes("SHARED") && 
+      !status.includes("APPROVED") && 
+      !status.includes("TESTING") && 
+      !status.includes("PROGRESS"));
 
-    return matchesSearch && matchesFilter;
-  });
-
+  return matchesSearch && matchesFilter;
+});
   return (
     <View style={styles.container}>
       {/* HEADER SECTION */}
