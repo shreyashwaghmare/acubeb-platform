@@ -11,11 +11,6 @@ import { useAppContext } from "../../context/AppContext";
 import { router } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useState } from "react";
-import Animated, {
-  FadeInDown,
-  LinearTransition,
-  useAnimatedStyle,
-} from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 
 export default function RequestsScreen() {
@@ -44,7 +39,13 @@ export default function RequestsScreen() {
   const onRefresh = async () => {
     try {
       setRefreshing(true);
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      try {
+        await Haptics.impactAsync(
+          Haptics.ImpactFeedbackStyle.Light
+        );
+      } catch {}
+
       await refreshRequests();
     } catch (e) {
       console.log("PULL REFRESH ERROR:", e);
@@ -59,7 +60,9 @@ export default function RequestsScreen() {
     const service = String(req?.service || "").toLowerCase();
     const requestNo = String(req?.requestNo || "").toLowerCase();
     const project = String(req?.project || "").toLowerCase();
-    const status = String(req?.status || "").toUpperCase();
+
+    const status = normalizeStatus(req?.status);
+
     const searchTerm = search.toLowerCase();
 
     const matchesSearch =
@@ -78,11 +81,9 @@ export default function RequestsScreen() {
           status.includes("PROGRESS") ||
           status.includes("VISIT"))) ||
       (activeFilter === "PENDING" &&
-        !status.includes("COMPLETED") &&
-        !status.includes("SHARED") &&
-        !status.includes("APPROVED") &&
-        !status.includes("TESTING") &&
-        !status.includes("PROGRESS"));
+        (status.includes("NEW_REQUEST") ||
+          status.includes("PENDING") ||
+          status.includes("REQUEST")));
 
     return matchesSearch && matchesFilter;
   });
@@ -90,8 +91,13 @@ export default function RequestsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.topHeader}>
-        <Text style={styles.metaLabel}>TRACKING & LOGISTICS</Text>
-        <Text style={styles.heading}>Active Deployments</Text>
+        <Text style={styles.metaLabel}>
+          TRACKING & LOGISTICS
+        </Text>
+
+        <Text style={styles.heading}>
+          Active Deployments
+        </Text>
 
         <View style={styles.searchContainer}>
           <TextInput
@@ -115,17 +121,20 @@ export default function RequestsScreen() {
                 try {
                   await Haptics.selectionAsync();
                 } catch {}
+
                 setActiveFilter(f);
               }}
               style={[
                 styles.filterChip,
-                activeFilter === f && styles.filterChipActive,
+                activeFilter === f &&
+                  styles.filterChipActive,
               ]}
             >
               <Text
                 style={[
                   styles.filterText,
-                  activeFilter === f && styles.filterTextActive,
+                  activeFilter === f &&
+                    styles.filterTextActive,
                 ]}
               >
                 {f}
@@ -137,7 +146,9 @@ export default function RequestsScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 150 }}
+        contentContainerStyle={{
+          paddingBottom: 150,
+        }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -149,14 +160,16 @@ export default function RequestsScreen() {
         {filteredRequests.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>📂</Text>
-            <Text style={styles.empty}>No matching deployments found.</Text>
+
+            <Text style={styles.empty}>
+              No matching deployments found.
+            </Text>
           </View>
         ) : (
           filteredRequests.map((item, index) => (
             <RequestCard
               key={String(item?.id || index)}
               item={item}
-              index={index}
             />
           ))
         )}
@@ -165,12 +178,10 @@ export default function RequestsScreen() {
   );
 }
 
-function RequestCard({ item, index }: { item: any; index: number }) {
-  const status = String(item?.status || "PENDING");
+function RequestCard({ item }: { item: any }) {
+  const status = normalizeStatus(item?.status);
 
-  const animatedProgressStyle = useAnimatedStyle(() => ({
-    width: getProgressWidth(status),
-  }));
+  const progressWidth = getProgressWidth(status);
 
   const openDetail = async () => {
     if (!item?.id) {
@@ -184,88 +195,121 @@ function RequestCard({ item, index }: { item: any; index: number }) {
 
     router.push({
       pathname: "/request-detail",
-      params: { id: String(item.id) },
+      params: {
+        id: String(item.id),
+      },
     });
   };
 
   return (
-    <Animated.View
-      entering={FadeInDown.delay(index * 50).springify()}
-      layout={LinearTransition.springify()}
+    <TouchableOpacity
+      activeOpacity={0.9}
+      style={styles.card}
+      onPress={openDetail}
     >
-      <TouchableOpacity activeOpacity={0.9} style={styles.card} onPress={openDetail}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.requestNo}>
-            {item?.requestNo || "ACB-REQ"}
-          </Text>
-
-          <View
-            style={[
-              styles.statusPill,
-              { backgroundColor: getStatusColor(status) + "15" },
-            ]}
-          >
-            <View
-              style={[
-                styles.statusDot,
-                { backgroundColor: getStatusColor(status) },
-              ]}
-            />
-
-            <Text
-              style={[
-                styles.statusText,
-                { color: getStatusColor(status) },
-              ]}
-            >
-              {status.split("_").join(" ").toUpperCase()}
-            </Text>
-          </View>
-        </View>
-
-        <Text style={styles.title}>
-          {item?.service || "Service Request"}
+      <View style={styles.cardHeader}>
+        <Text style={styles.requestNo}>
+          {item?.requestNo || "ACB-REQ"}
         </Text>
 
-        <View style={styles.bentoRow}>
-          <View style={styles.bentoItem}>
-            <Text style={styles.bentoLabel}>PROJECT</Text>
-            <Text style={styles.bentoValue} numberOfLines={1}>
-              {item?.project || "Unnamed Project"}
-            </Text>
-          </View>
+        <View
+          style={[
+            styles.statusPill,
+            {
+              backgroundColor:
+                getStatusColor(status) + "15",
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.statusDot,
+              {
+                backgroundColor:
+                  getStatusColor(status),
+              },
+            ]}
+          />
 
-          <View style={styles.bentoItem}>
-            <Text style={styles.bentoLabel}>SITE</Text>
-            <Text style={styles.bentoValue}>
-              {item?.site || "Global"}
-            </Text>
-          </View>
+          <Text
+            style={[
+              styles.statusText,
+              {
+                color: getStatusColor(status),
+              },
+            ]}
+          >
+            {status.split("_").join(" ")}
+          </Text>
+        </View>
+      </View>
+
+      <Text style={styles.title}>
+        {item?.service || "Service Request"}
+      </Text>
+
+      <View style={styles.bentoRow}>
+        <View style={styles.bentoItem}>
+          <Text style={styles.bentoLabel}>
+            PROJECT
+          </Text>
+
+          <Text
+            style={styles.bentoValue}
+            numberOfLines={1}
+          >
+            {item?.project || "Unnamed Project"}
+          </Text>
         </View>
 
-        <View style={styles.progressSection}>
-          <View style={styles.progressBarBg}>
-            <Animated.View
-              style={[
-                styles.progressBarFill,
-                { backgroundColor: getStatusColor(status) },
-                animatedProgressStyle,
-              ]}
-            />
-          </View>
+        <View style={styles.bentoItem}>
+          <Text style={styles.bentoLabel}>
+            SITE
+          </Text>
 
-          <View style={styles.progressLabels}>
-            <Text style={styles.progressText}>Project Momentum</Text>
-            <Text style={styles.progressText}>{getProgressWidth(status)}</Text>
-          </View>
+          <Text style={styles.bentoValue}>
+            {item?.site || "Global"}
+          </Text>
         </View>
-      </TouchableOpacity>
-    </Animated.View>
+      </View>
+
+      <View style={styles.progressSection}>
+        <View style={styles.progressBarBg}>
+          <View
+            style={[
+              styles.progressBarFill,
+              {
+                backgroundColor:
+                  getStatusColor(status),
+                width: progressWidth,
+              },
+            ]}
+          />
+        </View>
+
+        <View style={styles.progressLabels}>
+          <Text style={styles.progressText}>
+            Project Momentum
+          </Text>
+
+          <Text style={styles.progressText}>
+            {progressWidth}
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
   );
 }
 
+const normalizeStatus = (status?: string) => {
+  return String(status || "NEW_REQUEST")
+    .trim()
+    .replace(/\s+/g, "_")
+    .toUpperCase();
+};
+
 const getStatusColor = (status?: string) => {
-  const s = String(status || "").toUpperCase();
+  const s = normalizeStatus(status);
 
   if (
     s.includes("COMPLETED") ||
@@ -287,13 +331,19 @@ const getStatusColor = (status?: string) => {
 };
 
 const getProgressWidth = (status?: string) => {
-  const s = String(status || "").toUpperCase();
+  const s = normalizeStatus(status);
 
-  if (s.includes("COMPLETED") || s.includes("SHARED")) {
+  if (
+    s.includes("COMPLETED") ||
+    s.includes("SHARED")
+  ) {
     return "100%";
   }
 
-  if (s.includes("REPORT")) {
+  if (
+    s.includes("APPROVED") ||
+    s.includes("REPORT")
+  ) {
     return "85%";
   }
 
@@ -301,7 +351,10 @@ const getProgressWidth = (status?: string) => {
     return "60%";
   }
 
-  if (s.includes("VISIT") || s.includes("PROGRESS")) {
+  if (
+    s.includes("VISIT") ||
+    s.includes("PROGRESS")
+  ) {
     return "40%";
   }
 
@@ -309,15 +362,31 @@ const getProgressWidth = (status?: string) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#080808", paddingHorizontal: 18 },
-  topHeader: { marginTop: 60, marginBottom: 20 },
+  container: {
+    flex: 1,
+    backgroundColor: "#080808",
+    paddingHorizontal: 18,
+  },
+
+  topHeader: {
+    marginTop: 60,
+    marginBottom: 20,
+  },
+
   metaLabel: {
     color: "#444",
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
   },
-  heading: { color: "#D4AF37", fontSize: 28, fontWeight: "900", marginTop: 4 },
+
+  heading: {
+    color: "#D4AF37",
+    fontSize: 28,
+    fontWeight: "900",
+    marginTop: 4,
+  },
+
   searchContainer: {
     backgroundColor: "#121212",
     borderRadius: 16,
@@ -328,8 +397,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#1A1A1A",
   },
-  searchInput: { color: "#FFF", fontSize: 14, fontWeight: "600" },
-  filterScroll: { marginTop: 15, flexDirection: "row" },
+
+  searchInput: {
+    color: "#FFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  filterScroll: {
+    marginTop: 15,
+    flexDirection: "row",
+  },
+
   filterChip: {
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -339,12 +418,38 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#1A1A1A",
   },
-  filterChipActive: { backgroundColor: "#D4AF37", borderColor: "#D4AF37" },
-  filterText: { color: "#555", fontSize: 10, fontWeight: "900" },
-  filterTextActive: { color: "#000" },
-  emptyContainer: { marginTop: 80, alignItems: "center" },
-  emptyIcon: { fontSize: 40, marginBottom: 15 },
-  empty: { color: "#444", fontWeight: "700", textAlign: "center" },
+
+  filterChipActive: {
+    backgroundColor: "#D4AF37",
+    borderColor: "#D4AF37",
+  },
+
+  filterText: {
+    color: "#555",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+
+  filterTextActive: {
+    color: "#000",
+  },
+
+  emptyContainer: {
+    marginTop: 80,
+    alignItems: "center",
+  },
+
+  emptyIcon: {
+    fontSize: 40,
+    marginBottom: 15,
+  },
+
+  empty: {
+    color: "#444",
+    fontWeight: "700",
+    textAlign: "center",
+  },
+
   card: {
     backgroundColor: "#111",
     shadowColor: "#000",
@@ -358,12 +463,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#1A1A1A",
   },
+
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  requestNo: { color: "#555", fontSize: 12, fontWeight: "900" },
+
+  requestNo: {
+    color: "#555",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+
   statusPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -371,10 +483,32 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
   },
-  statusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 8 },
-  statusText: { fontSize: 10, fontWeight: "900" },
-  title: { color: "#FFF", fontSize: 19, fontWeight: "800", marginTop: 14 },
-  bentoRow: { flexDirection: "row", marginTop: 18, gap: 15 },
+
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 8,
+  },
+
+  statusText: {
+    fontSize: 10,
+    fontWeight: "900",
+  },
+
+  title: {
+    color: "#FFF",
+    fontSize: 19,
+    fontWeight: "800",
+    marginTop: 14,
+  },
+
+  bentoRow: {
+    flexDirection: "row",
+    marginTop: 18,
+    gap: 15,
+  },
+
   bentoItem: {
     flex: 1,
     backgroundColor: "#0C0C0C",
@@ -383,26 +517,43 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#151515",
   },
+
   bentoLabel: {
     color: "#D4AF37",
     fontSize: 8,
     fontWeight: "900",
     letterSpacing: 1,
   },
-  bentoValue: { color: "#AAA", fontSize: 12, fontWeight: "600", marginTop: 4 },
-  progressSection: { marginTop: 20 },
+
+  bentoValue: {
+    color: "#AAA",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 4,
+  },
+
+  progressSection: {
+    marginTop: 20,
+  },
+
   progressBarBg: {
     height: 4,
     backgroundColor: "#1A1A1A",
     borderRadius: 2,
     overflow: "hidden",
   },
-  progressBarFill: { height: "100%", borderRadius: 2 },
+
+  progressBarFill: {
+    height: "100%",
+    borderRadius: 2,
+  },
+
   progressLabels: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 8,
   },
+
   progressText: {
     color: "#444",
     fontSize: 10,
