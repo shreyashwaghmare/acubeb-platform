@@ -132,10 +132,10 @@ function RequestCard({ item, index }: { item: any; index: number }) {
         style={styles.card}
         onPress={() => {
           Haptics.selectionAsync();
-         router.push({
-  pathname: "/request-detail",
-  params: { id: item.id },
-});
+          router.push({
+            pathname: "/request-detail",
+            params: { id: item.id },
+          });
         }}
       >
         <View style={styles.cardHeader}>
@@ -158,8 +158,9 @@ function RequestCard({ item, index }: { item: any; index: number }) {
                 { color: getStatusColor(item.status) },
               ]}
             >
-              {String(item.status || "")
-                .replaceAll("_", " ")
+              {String(item?.status ?? "PENDING")
+                .split("_")
+                .join(" ")
                 .toUpperCase()}
             </Text>
           </View>
