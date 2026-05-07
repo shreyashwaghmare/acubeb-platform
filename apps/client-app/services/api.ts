@@ -1,6 +1,7 @@
- const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+ //const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+ //const BASE_URL="http://192.168.1.6:5050";
 // ⚠️ IMPORTANT: replace localhost with your IP
-
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.1.6:5050";
 export const api = {
   register: async (name: string, mobile: string) => {
   const res = await fetch(`${BASE_URL}/api/auth/register`, {
