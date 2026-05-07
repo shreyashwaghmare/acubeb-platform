@@ -13,6 +13,11 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useState } from "react";
 import * as Haptics from "expo-haptics";
 
+const GOLD = "#D4AF37";
+const BG = "#080808";
+const CARD = "#111";
+const BORDER = "rgba(212,175,55,0.16)";
+
 export default function RequestsScreen() {
   const { requests, refreshRequests } = useAppContext();
 
@@ -54,39 +59,53 @@ export default function RequestsScreen() {
     }
   };
 
-  const safeRequests = Array.isArray(requests) ? requests : [];
+  const safeRequests = Array.isArray(requests)
+    ? requests
+    : [];
 
-  const filteredRequests = safeRequests.filter((req) => {
-    const service = String(req?.service || "").toLowerCase();
-    const requestNo = String(req?.requestNo || "").toLowerCase();
-    const project = String(req?.project || "").toLowerCase();
+  const filteredRequests = safeRequests.filter(
+    (req) => {
+      const service = String(
+        req?.service || ""
+      ).toLowerCase();
 
-    const status = normalizeStatus(req?.status);
+      const requestNo = String(
+        req?.requestNo || ""
+      ).toLowerCase();
 
-    const searchTerm = search.toLowerCase();
+      const project = String(
+        req?.project || ""
+      ).toLowerCase();
 
-    const matchesSearch =
-      service.includes(searchTerm) ||
-      requestNo.includes(searchTerm) ||
-      project.includes(searchTerm);
+      const status = normalizeStatus(
+        req?.status
+      );
 
-    const matchesFilter =
-      activeFilter === "ALL" ||
-      (activeFilter === "COMPLETED" &&
-        (status.includes("COMPLETED") ||
-          status.includes("SHARED") ||
-          status.includes("APPROVED"))) ||
-      (activeFilter === "TESTING" &&
-        (status.includes("TESTING") ||
-          status.includes("PROGRESS") ||
-          status.includes("VISIT"))) ||
-      (activeFilter === "PENDING" &&
-        (status.includes("NEW_REQUEST") ||
-          status.includes("PENDING") ||
-          status.includes("REQUEST")));
+      const searchTerm = search.toLowerCase();
 
-    return matchesSearch && matchesFilter;
-  });
+      const matchesSearch =
+        service.includes(searchTerm) ||
+        requestNo.includes(searchTerm) ||
+        project.includes(searchTerm);
+
+      const matchesFilter =
+        activeFilter === "ALL" ||
+        (activeFilter === "COMPLETED" &&
+          (status.includes("COMPLETED") ||
+            status.includes("SHARED") ||
+            status.includes("APPROVED"))) ||
+        (activeFilter === "TESTING" &&
+          (status.includes("TESTING") ||
+            status.includes("PROGRESS") ||
+            status.includes("VISIT"))) ||
+        (activeFilter === "PENDING" &&
+          (status.includes("NEW_REQUEST") ||
+            status.includes("PENDING") ||
+            status.includes("REQUEST")));
+
+      return matchesSearch && matchesFilter;
+    }
+  );
 
   return (
     <View style={styles.container}>
@@ -96,7 +115,7 @@ export default function RequestsScreen() {
         </Text>
 
         <Text style={styles.heading}>
-          Active Deployments
+          Active Requests
         </Text>
 
         <View style={styles.searchContainer}>
@@ -117,6 +136,7 @@ export default function RequestsScreen() {
           {filters.map((f) => (
             <TouchableOpacity
               key={f}
+              activeOpacity={0.85}
               onPress={async () => {
                 try {
                   await Haptics.selectionAsync();
@@ -153,13 +173,15 @@ export default function RequestsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#D4AF37"
+            tintColor={GOLD}
           />
         }
       >
         {filteredRequests.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>📂</Text>
+            <Text style={styles.emptyIcon}>
+              📂
+            </Text>
 
             <Text style={styles.empty}>
               No matching deployments found.
@@ -179,13 +201,19 @@ export default function RequestsScreen() {
 }
 
 function RequestCard({ item }: { item: any }) {
-  const status = normalizeStatus(item?.status);
+  const status = normalizeStatus(
+    item?.status
+  );
 
-  const progressWidth = getProgressWidth(status);
+  const progressWidth =
+    getProgressWidth(status);
 
   const openDetail = async () => {
     if (!item?.id) {
-      console.log("REQUEST ID MISSING:", item);
+      console.log(
+        "REQUEST ID MISSING:",
+        item
+      );
       return;
     }
 
@@ -207,6 +235,9 @@ function RequestCard({ item }: { item: any }) {
       style={styles.card}
       onPress={openDetail}
     >
+      <View style={styles.topAccent} />
+      
+
       <View style={styles.cardHeader}>
         <Text style={styles.requestNo}>
           {item?.requestNo || "ACB-REQ"}
@@ -217,7 +248,8 @@ function RequestCard({ item }: { item: any }) {
             styles.statusPill,
             {
               backgroundColor:
-                getStatusColor(status) + "15",
+                getStatusColor(status) +
+                "18",
             },
           ]}
         >
@@ -235,17 +267,21 @@ function RequestCard({ item }: { item: any }) {
             style={[
               styles.statusText,
               {
-                color: getStatusColor(status),
+                color:
+                  getStatusColor(status),
               },
             ]}
           >
-            {status.split("_").join(" ")}
+            {status
+              .split("_")
+              .join(" ")}
           </Text>
         </View>
       </View>
 
       <Text style={styles.title}>
-        {item?.service || "Service Request"}
+        {item?.service ||
+          "Service Request"}
       </Text>
 
       <View style={styles.bentoRow}>
@@ -258,7 +294,8 @@ function RequestCard({ item }: { item: any }) {
             style={styles.bentoValue}
             numberOfLines={1}
           >
-            {item?.project || "Unnamed Project"}
+            {item?.project ||
+              "Unnamed Project"}
           </Text>
         </View>
 
@@ -301,14 +338,20 @@ function RequestCard({ item }: { item: any }) {
   );
 }
 
-const normalizeStatus = (status?: string) => {
-  return String(status || "NEW_REQUEST")
+const normalizeStatus = (
+  status?: string
+) => {
+  return String(
+    status || "NEW_REQUEST"
+  )
     .trim()
     .replace(/\s+/g, "_")
     .toUpperCase();
 };
 
-const getStatusColor = (status?: string) => {
+const getStatusColor = (
+  status?: string
+) => {
   const s = normalizeStatus(status);
 
   if (
@@ -327,10 +370,12 @@ const getStatusColor = (status?: string) => {
     return "#FF9800";
   }
 
-  return "#D4AF37";
+  return GOLD;
 };
 
-const getProgressWidth = (status?: string) => {
+const getProgressWidth = (
+  status?: string
+) => {
   const s = normalizeStatus(status);
 
   if (
@@ -364,7 +409,7 @@ const getProgressWidth = (status?: string) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#080808",
+    backgroundColor: BG,
     paddingHorizontal: 18,
   },
 
@@ -381,21 +426,21 @@ const styles = StyleSheet.create({
   },
 
   heading: {
-    color: "#D4AF37",
-    fontSize: 28,
+    color: GOLD,
+    fontSize: 30,
     fontWeight: "900",
     marginTop: 4,
   },
 
   searchContainer: {
     backgroundColor: "#121212",
-    borderRadius: 16,
-    height: 50,
+    borderRadius: 18,
+    height: 54,
     marginTop: 20,
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#1A1A1A",
+    borderColor: BORDER,
   },
 
   searchInput: {
@@ -405,29 +450,34 @@ const styles = StyleSheet.create({
   },
 
   filterScroll: {
-    marginTop: 15,
+    marginTop: 16,
     flexDirection: "row",
   },
 
   filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 14,
     backgroundColor: "#111",
-    marginRight: 8,
+    marginRight: 10,
     borderWidth: 1,
     borderColor: "#1A1A1A",
   },
 
   filterChipActive: {
-    backgroundColor: "#D4AF37",
-    borderColor: "#D4AF37",
+    backgroundColor: GOLD,
+    borderColor: GOLD,
+    shadowColor: GOLD,
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 5,
   },
 
   filterText: {
-    color: "#555",
+    color: "#666",
     fontSize: 10,
     fontWeight: "900",
+    letterSpacing: 1,
   },
 
   filterTextActive: {
@@ -435,34 +485,49 @@ const styles = StyleSheet.create({
   },
 
   emptyContainer: {
-    marginTop: 80,
+    marginTop: 100,
     alignItems: "center",
   },
 
   emptyIcon: {
-    fontSize: 40,
+    fontSize: 44,
     marginBottom: 15,
   },
 
   empty: {
-    color: "#444",
+    color: "#555",
     fontWeight: "700",
     textAlign: "center",
   },
 
   card: {
-    backgroundColor: "#111",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    elevation: 10,
-    borderRadius: 28,
+    backgroundColor: CARD,
+    borderRadius: 30,
     padding: 22,
-    marginBottom: 16,
+    marginBottom: 18,
     borderWidth: 1,
-    borderColor: "#1A1A1A",
+    borderColor: BORDER,
+    overflow: "hidden",
+
+    shadowColor: GOLD,
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 10,
   },
+
+  topAccent: {
+  position: "absolute",
+  top: 0,
+  left: 22,
+  right: 22,
+  height: 2,
+  borderRadius: 2,
+  backgroundColor: "rgba(212,175,55,0.55)",
+},
 
   cardHeader: {
     flexDirection: "row",
@@ -471,7 +536,7 @@ const styles = StyleSheet.create({
   },
 
   requestNo: {
-    color: "#555",
+    color: "#666",
     fontSize: 12,
     fontWeight: "900",
   },
@@ -480,8 +545,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingVertical: 7,
+    borderRadius: 22,
   },
 
   statusDot: {
@@ -494,13 +559,14 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 10,
     fontWeight: "900",
+    letterSpacing: 0.6,
   },
 
   title: {
     color: "#FFF",
-    fontSize: 19,
+    fontSize: 20,
     fontWeight: "800",
-    marginTop: 14,
+    marginTop: 16,
   },
 
   bentoRow: {
@@ -512,40 +578,40 @@ const styles = StyleSheet.create({
   bentoItem: {
     flex: 1,
     backgroundColor: "#0C0C0C",
-    padding: 12,
-    borderRadius: 16,
+    padding: 14,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#151515",
+    borderColor: "#181818",
   },
 
   bentoLabel: {
-    color: "#D4AF37",
+    color: GOLD,
     fontSize: 8,
     fontWeight: "900",
-    letterSpacing: 1,
+    letterSpacing: 1.2,
   },
 
   bentoValue: {
     color: "#AAA",
     fontSize: 12,
     fontWeight: "600",
-    marginTop: 4,
+    marginTop: 5,
   },
 
   progressSection: {
-    marginTop: 20,
+    marginTop: 22,
   },
 
   progressBarBg: {
-    height: 4,
+    height: 5,
     backgroundColor: "#1A1A1A",
-    borderRadius: 2,
+    borderRadius: 3,
     overflow: "hidden",
   },
 
   progressBarFill: {
     height: "100%",
-    borderRadius: 2,
+    borderRadius: 3,
   },
 
   progressLabels: {
@@ -555,7 +621,7 @@ const styles = StyleSheet.create({
   },
 
   progressText: {
-    color: "#444",
+    color: "#555",
     fontSize: 10,
     fontWeight: "800",
     textTransform: "uppercase",
