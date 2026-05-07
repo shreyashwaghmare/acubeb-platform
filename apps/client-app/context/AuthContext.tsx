@@ -56,7 +56,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (mobile: string, token: string, name = "Client") => {
+    console.log("JWT TOKEN:", token);
     console.log("🔐 LOGIN STARTED");
+    
 
     try {
       // 1. Save Token to Storage

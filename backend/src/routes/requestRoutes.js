@@ -6,6 +6,7 @@ const authMiddleware = require("../middleware/authMiddleware");
 const {
   createRequest,
   getMyRequests,
+  debugAllRequests,
   getRequestById,
   updateStatus,
   getRequestHistory,
@@ -27,7 +28,7 @@ router.get(
   authMiddleware,
   getMyRequests
 );
-
+router.get("/debug/all", authMiddleware, debugAllRequests);
 /* ===================== HISTORY ===================== */
 /* IMPORTANT: keep ABOVE "/:id" */
 

@@ -50,7 +50,7 @@ exports.createRequest = async (req, res) => {
 
     const id = uuidv4();
     const requestNo = `ACB-REQ-${Date.now().toString().slice(-6)}`;
-
+    console.log("CREATE REQUEST USER ID:", req.user.id);
     const result = await pool.query(
       `INSERT INTO service_requests
       (
@@ -127,6 +127,7 @@ exports.createRequest = async (req, res) => {
 /* ===================== GET MY REQUESTS ===================== */
 
 exports.getMyRequests = async (req, res) => {
+  console.log("GET REQUESTS USER ID:", req.user.id);
   try {
     const result = await pool.query(
       `SELECT
@@ -373,6 +374,37 @@ exports.testApproveRequest = async (req, res) => {
   } catch (error) {
     console.log("TEST APPROVE ERROR:", error);
 
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+exports.debugAllRequests = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        sr.id,
+        sr.request_no AS "requestNo",
+        sr.user_id AS "userId",
+        u.name AS "clientName",
+        u.mobile,
+        sr.service,
+        sr.project,
+        sr.status,
+        sr.created_at AS "createdAt"
+      FROM service_requests sr
+      LEFT JOIN users u ON u.id = sr.user_id
+      ORDER BY sr.created_at DESC
+      LIMIT 20`
+    );
+
+    res.json({
+      success: true,
+      data: result.rows,
+    });
+  } catch (error) {
     res.status(500).json({
       success: false,
       message: error.message,
