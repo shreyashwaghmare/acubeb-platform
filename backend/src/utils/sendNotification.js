@@ -1,5 +1,3 @@
-const fetch = require("node-fetch");
-
 exports.sendNotification = async (
   expoPushToken,
   message,
