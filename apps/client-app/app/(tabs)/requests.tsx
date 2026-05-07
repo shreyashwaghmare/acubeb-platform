@@ -10,7 +10,7 @@ import {
 import { useAppContext } from "../../context/AppContext";
 import { router } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
-import { useCallback, useState } from "react";
+import { useCallback, useState,useRef } from "react";
 import * as Haptics from "expo-haptics";
 
 const GOLD = "#D4AF37";
@@ -20,7 +20,7 @@ const BORDER = "rgba(212,175,55,0.16)";
 
 export default function RequestsScreen() {
   const { requests, refreshRequests } = useAppContext();
-
+  const scrollRef = useRef<ScrollView>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("ALL");
@@ -29,6 +29,10 @@ export default function RequestsScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      scrollRef.current?.scrollTo({
+      y: 0,
+      animated: false,
+    });
       const load = async () => {
         try {
           await refreshRequests();
@@ -164,7 +168,7 @@ export default function RequestsScreen() {
         </ScrollView>
       </View>
 
-      <ScrollView
+      <ScrollView ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingBottom: 150,

@@ -3,6 +3,15 @@ import * as Device from "expo-device";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
 export async function registerForPushNotifications() {
   try {
     console.log("📲 Registering for push notifications...");
@@ -42,7 +51,10 @@ export async function registerForPushNotifications() {
 
     // 🔥 GET PROJECT ID (IMPORTANT)
     // 🔥 GET PROJECT ID (STRICT SDK 54 WAY)
-    const projectId = "b9f4efd4-168a-4803-bce0-52731da57b3e"; // Explicitly paste your ID from the build page
+    const projectId =
+  Constants.expoConfig?.extra?.eas?.projectId ??
+  Constants.easConfig?.projectId;
+   // Explicitly paste your ID from the build page
 
     console.log("📦 Using Project ID:", projectId);
 

@@ -1,15 +1,25 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView} from "react-native";
 import { useAppContext } from "../../context/AppContext";
 import { router } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useRef } from "react";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from "@expo/vector-icons";
 
 export default function ProfileScreen() {
+  const scrollRef = useRef<ScrollView>(null);
   const { client } = useAppContext();
   const { logout } = useAuth();
-
+  useFocusEffect(
+  useCallback(() => {
+    scrollRef.current?.scrollTo({
+      y: 0,
+      animated: false,
+    });
+  }, [])
+);
   const handleLogout = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     await logout();
@@ -30,7 +40,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView  ref={scrollRef} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         
         {/* EXECUTIVE HEADER */}
         <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.headerSection}>

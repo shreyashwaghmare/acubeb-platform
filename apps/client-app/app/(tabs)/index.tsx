@@ -1,7 +1,7 @@
 import { ScrollView, Text, View, StyleSheet, TouchableOpacity, TextInput } from "react-native";
 import { useAppContext } from "../../context/AppContext";
 import { router } from "expo-router";
-import { useEffect } from "react";
+import { useEffect,useRef, useCallback } from "react";
 import Animated, {
   useSharedValue,
   useAnimatedProps,
@@ -9,7 +9,7 @@ import Animated, {
   FadeInDown,
   FadeInRight,
 } from "react-native-reanimated";
-
+import { useFocusEffect } from "@react-navigation/native";
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 function CountUp({ value }: { value: number }) {
@@ -35,6 +35,7 @@ function CountUp({ value }: { value: number }) {
 }
 
 export default function HomeScreen() {
+  const scrollRef = useRef<ScrollView>(null);
   const { requests, client } = useAppContext();
 
   const total = requests.length;
@@ -47,9 +48,16 @@ export default function HomeScreen() {
   ).length;
 
   const pending = Math.max(total - completed, 0);
-
+  useFocusEffect(
+  useCallback(() => {
+    scrollRef.current?.scrollTo({
+      y: 0,
+      animated: false,
+    });
+  }, [])
+);
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 160 }}>
+    <ScrollView ref={scrollRef} style={styles.container} contentContainerStyle={{ paddingBottom: 160 }}>
       <View style={styles.header}>
         <View>
           <Text style={styles.logo}>A CUBE B</Text>

@@ -1,11 +1,13 @@
 import { ScrollView, Text, View, TouchableOpacity, StyleSheet, RefreshControl, ActivityIndicator } from "react-native";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback,useRef } from "react";
 import { router } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
 import { api } from "../../services/api";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { useFocusEffect } from "@react-navigation/native";
 
 export default function ReportsScreen() {
+  const scrollRef = useRef<ScrollView>(null);
   const { user } = useAuth();
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +38,14 @@ export default function ReportsScreen() {
     fetchReports();
   }, []);
 
+useFocusEffect(
+  useCallback(() => {
+    scrollRef.current?.scrollTo({
+      y: 0,
+      animated: false,
+    });
+  }, [])
+);
   // --- EMPTY STATE COMPONENT ---
   if (!loading && reports.length === 0) {
     return (
@@ -59,6 +69,7 @@ export default function ReportsScreen() {
 
   return (
     <ScrollView 
+     ref={scrollRef}
       style={styles.container} 
       contentContainerStyle={{ paddingBottom: 150 }}
       refreshControl={

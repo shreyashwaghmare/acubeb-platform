@@ -2,6 +2,39 @@ const { v4: uuidv4 } = require("uuid");
 const pool = require("../config/db");
 const { sendNotification } = require("../utils/sendNotification");
 
+/* ===================== HELPERS ===================== */
+
+const normalizeStatus = (status = "") => {
+  return String(status).trim().replace(/\s+/g, "_").toUpperCase();
+};
+
+const getStatusMessage = (status) => {
+  const s = normalizeStatus(status);
+
+  switch (s) {
+    case "NEW_REQUEST":
+      return "Your request has been created successfully.";
+    case "REQUEST_APPROVED":
+    case "APPROVED":
+      return "Your request has been approved.";
+    case "OPERATOR_ASSIGNED":
+      return "An operator has been assigned to your request.";
+    case "SITE_VISIT_SCHEDULED":
+      return "Site visit has been scheduled for your request.";
+    case "SAMPLE_COLLECTED":
+      return "Sample collection has been completed.";
+    case "TESTING_IN_PROGRESS":
+      return "Testing is now in progress.";
+    case "REPORT_APPROVED":
+      return "Your report has been approved.";
+    case "FINAL_REPORT_SHARED":
+    case "COMPLETED":
+      return "Your final report is ready. Tap to view.";
+    default:
+      return `Your request status is now ${String(status).replace(/_/g, " ")}.`;
+  }
+};
+
 /* ===================== CREATE REQUEST ===================== */
 
 exports.createRequest = async (req, res) => {
@@ -18,7 +51,6 @@ exports.createRequest = async (req, res) => {
     const id = uuidv4();
     const requestNo = `ACB-REQ-${Date.now().toString().slice(-6)}`;
 
-    // Create request
     const result = await pool.query(
       `INSERT INTO service_requests
       (
@@ -30,9 +62,10 @@ exports.createRequest = async (req, res) => {
         site,
         contact_person,
         sample_qty,
-        remarks
+        remarks,
+        status
       )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
       RETURNING
         id,
         request_no AS "requestNo",
@@ -54,10 +87,10 @@ exports.createRequest = async (req, res) => {
         contact_person,
         sample_qty,
         remarks,
+        "NEW_REQUEST",
       ]
     );
 
-    // Insert initial history
     await pool.query(
       `INSERT INTO request_status_history
       (
@@ -182,15 +215,25 @@ exports.updateStatus = async (req, res) => {
       });
     }
 
-    // Update request status
-    await pool.query(
+    const finalStatus = normalizeStatus(status);
+
+    const updatedRequest = await pool.query(
       `UPDATE service_requests
        SET status=$1
-       WHERE id=$2`,
-      [status, requestId]
+       WHERE id=$2
+       RETURNING id, user_id, request_no, service, project, status`,
+      [finalStatus, requestId]
     );
 
-    // Insert status history
+    if (!updatedRequest.rows[0]) {
+      return res.status(404).json({
+        success: false,
+        message: "Request not found",
+      });
+    }
+
+    const requestRow = updatedRequest.rows[0];
+
     await pool.query(
       `INSERT INTO request_status_history
       (
@@ -204,73 +247,73 @@ exports.updateStatus = async (req, res) => {
       [
         uuidv4(),
         requestId,
-        status,
-        req.user?.role || "admin",
-        remarks || "",
+        finalStatus,
+        req.user?.role || "operator",
+        remarks || getStatusMessage(finalStatus),
       ]
     );
 
-    /* ===================== SEND PUSH NOTIFICATION ===================== */
+    /* ===================== AUTOMATED PUSH NOTIFICATION ===================== */
 
-    if (
-      status === "REPORT_APPROVED" ||
-      status === "FINAL_REPORT_SHARED" ||
-      status === "COMPLETED"
-    ) {
-      try {
-        // Get request owner
-        const requestData = await pool.query(
-          `SELECT user_id
-           FROM service_requests
-           WHERE id=$1`,
-          [requestId]
-        );
+    try {
+      const userData = await pool.query(
+        `SELECT expo_push_token
+         FROM users
+         WHERE id=$1`,
+        [requestRow.user_id]
+      );
 
-        const userId = requestData.rows[0]?.user_id;
+      const pushToken = userData.rows[0]?.expo_push_token;
 
-        if (userId) {
-          // Get user push token
-          const userData = await pool.query(
-            `SELECT expo_push_token
-             FROM users
-             WHERE id=$1`,
-            [userId]
+      if (pushToken) {
+        let screen = "request-detail";
+        let reportId = null;
+
+        if (
+          finalStatus === "REPORT_APPROVED" ||
+          finalStatus === "FINAL_REPORT_SHARED" ||
+          finalStatus === "COMPLETED"
+        ) {
+          const reportData = await pool.query(
+            `SELECT id
+             FROM reports
+             WHERE request_id=$1
+             ORDER BY created_at DESC
+             LIMIT 1`,
+            [requestId]
           );
 
-          const pushToken = userData.rows[0]?.expo_push_token;
+          reportId = reportData.rows[0]?.id || null;
 
-          if (pushToken) {
-            // Get report ID for deep linking
-            const reportData = await pool.query(
-              `SELECT id
-               FROM reports
-               WHERE request_id=$1`,
-              [requestId]
-            );
-
-            const reportId = reportData.rows[0]?.id;
-
-            console.log("Push Token:", pushToken);
-            console.log("Report ID:", reportId);
-
-            await sendNotification(
-              pushToken,
-              "Your report is ready. Tap to view.",
-              reportId
-            );
+          if (reportId) {
+            screen = "report-detail";
           }
         }
-      } catch (notificationError) {
-        console.log(
-          "NOTIFICATION ERROR:",
-          notificationError
+
+        await sendNotification(
+          pushToken,
+          getStatusMessage(finalStatus),
+          {
+            title: "A Cube B Consultants",
+            screen,
+            requestId,
+            reportId,
+          }
         );
+      } else {
+        console.log("No push token found for user:", requestRow.user_id);
       }
+    } catch (notificationError) {
+      console.log("NOTIFICATION ERROR:", notificationError);
     }
 
     res.json({
       success: true,
       message: "Status updated successfully",
+      data: {
+        requestId,
+        status: finalStatus,
+      },
     });
   } catch (error) {
     console.log("UPDATE STATUS ERROR:", error);
