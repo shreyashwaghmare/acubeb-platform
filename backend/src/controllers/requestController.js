@@ -127,7 +127,7 @@ exports.createRequest = async (req, res) => {
 /* ===================== GET MY REQUESTS ===================== */
 
 exports.getMyRequests = async (req, res) => {
-  console.log("GET REQUESTS USER ID:", req.user.id);
+  
   try {
     const result = await pool.query(
       `SELECT
