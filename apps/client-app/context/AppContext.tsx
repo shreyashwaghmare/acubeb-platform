@@ -5,6 +5,8 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
+import { AppState } from "react-native";
+import * as Notifications from "expo-notifications";
 import { useAuth } from "./AuthContext";
 import { api } from "../services/api";
 
@@ -78,7 +80,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       const res = await api.getRequests(user.token);
-
+      console.log("LIVE REQUEST REFRESH:", res);
       if (res?.success && Array.isArray(res.data)) {
         const formatted: RequestItem[] = res.data.map((item: any) => ({
           id: String(item?.id || ""),
@@ -116,6 +118,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setRequests([]);
     }
   }, [user?.token, refreshClient, refreshRequests]);
+  // ✅ Refresh when notification arrives while app is open
+useEffect(() => {
+  if (!user?.token) return;
+
+  const sub = Notifications.addNotificationReceivedListener(() => {
+    console.log("NOTIFICATION RECEIVED → REFRESH REQUESTS");
+    refreshRequests();
+  });
+
+  return () => sub.remove();
+}, [user?.token, refreshRequests]);
+
+// ✅ Refresh when app comes to foreground
+useEffect(() => {
+  if (!user?.token) return;
+
+  const sub = AppState.addEventListener("change", (state) => {
+    if (state === "active") {
+      console.log("APP ACTIVE → REFRESH REQUESTS");
+      refreshRequests();
+    }
+  });
+
+  return () => sub.remove();
+}, [user?.token, refreshRequests]);
+
+// ✅ Auto refresh every 10 seconds
+useEffect(() => {
+  if (!user?.token) return;
+
+  const interval = setInterval(() => {
+    refreshRequests();
+  }, 10000);
+
+  return () => clearInterval(interval);
+}, [user?.token, refreshRequests]);
 
   const addRequest = () => {
     // Backend-driven now

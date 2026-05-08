@@ -86,3 +86,114 @@ exports.login = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+const admin = require("../config/firebase");
+
+exports.firebaseLogin = async (req, res) => {
+  try {
+    const {
+      firebaseToken,
+      mobile,
+      email,
+      name,
+      profileImage,
+      provider,
+    } = req.body;
+
+    if (!firebaseToken) {
+      return res.status(400).json({
+        success: false,
+        message: "Firebase token required",
+      });
+    }
+
+    // ✅ Verify Firebase token
+    const decoded = await admin.auth().verifyIdToken(firebaseToken);
+
+    const firebaseUid = decoded.uid;
+
+    // ✅ Check existing user
+    let result = await pool.query(
+      `SELECT * FROM users WHERE firebase_uid = $1`,
+      [firebaseUid]
+    );
+
+    let user;
+
+    // ✅ Create user if not exists
+    if (result.rows.length === 0) {
+      const id = uuidv4();
+
+      const created = await pool.query(
+        `
+        INSERT INTO users (
+          id,
+          firebase_uid,
+          auth_provider,
+          is_verified,
+          mobile,
+          email,
+          name,
+          profile_image,
+          role
+        )
+        VALUES (
+          $1,$2,$3,$4,$5,$6,$7,$8,$9
+        )
+        RETURNING *
+        `,
+        [
+          id,
+          firebaseUid,
+          provider || "firebase",
+          true,
+          mobile || "",
+          email || "",
+          name || "Client",
+          profileImage || "",
+          "client",
+        ]
+      );
+
+      user = created.rows[0];
+    } else {
+      user = result.rows[0];
+
+      // ✅ Update latest profile info
+      await pool.query(
+        `
+        UPDATE users
+        SET
+          mobile = COALESCE($1, mobile),
+          email = COALESCE($2, email),
+          name = COALESCE($3, name),
+          profile_image = COALESCE($4, profile_image),
+          is_verified = true
+        WHERE id = $5
+        `,
+        [
+          mobile,
+          email,
+          name,
+          profileImage,
+          user.id,
+        ]
+      );
+    }
+
+    // ✅ Generate app JWT
+    const token = createToken(user);
+
+    res.json({
+      success: true,
+      token,
+      user,
+    });
+  } catch (error) {
+    console.log("FIREBASE LOGIN ERROR:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};

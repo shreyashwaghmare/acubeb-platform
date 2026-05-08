@@ -1,7 +1,7 @@
  //const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
  //const BASE_URL="http://192.168.1.6:5050";
 // ⚠️ IMPORTANT: replace localhost with your IP
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "https://acubeb-platform-production.up.railway.app";
+const BASE_URL =  "https://acubeb-platform-production.up.railway.app";
 export const api = {
   register: async (name: string, mobile: string) => {
   const res = await fetch(`${BASE_URL}/api/auth/register`, {
@@ -63,14 +63,17 @@ export const api = {
   },
 
   getRequests: async (token: string) => {
-    const res = await fetch(`${BASE_URL}/api/requests`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+  const res = await fetch(`${BASE_URL}/api/requests?t=${Date.now()}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+    },
+  });
 
-    return res.json();
-  },
+  return res.json();
+},
   
   getRequestHistory: async (token: string, id: string) => {
   const res = await fetch(`${BASE_URL}/api/requests/${id}/history`, {

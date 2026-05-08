@@ -36,7 +36,7 @@ function CountUp({ value }: { value: number }) {
 
 export default function HomeScreen() {
   const scrollRef = useRef<ScrollView>(null);
-  const { requests, client } = useAppContext();
+  const { requests, client,refreshRequests } = useAppContext();
 
   const total = requests.length;
 
@@ -50,11 +50,17 @@ export default function HomeScreen() {
   const pending = Math.max(total - completed, 0);
   useFocusEffect(
   useCallback(() => {
-    scrollRef.current?.scrollTo({
-      y: 0,
-      animated: false,
-    });
-  }, [])
+    const load = async () => {
+      scrollRef.current?.scrollTo({
+        y: 0,
+        animated: false,
+      });
+
+      await refreshRequests();
+    };
+
+    load();
+  }, [refreshRequests])
 );
   return (
     <ScrollView ref={scrollRef} style={styles.container} contentContainerStyle={{ paddingBottom: 160 }}>

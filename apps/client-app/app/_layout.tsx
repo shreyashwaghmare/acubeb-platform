@@ -45,20 +45,42 @@ function MainLayout() {
   }, [loading, isLoggedIn, isAuthScreen]);
 
   useEffect(() => {
+    const openFromNotification = (data: any) => {
+      console.log("NOTIFICATION CLICK DATA:", data);
+
+      if (data?.screen === "request-detail" && data?.requestId) {
+        router.push({
+          pathname: "/request-detail",
+          params: {
+            id: String(data.requestId),
+          },
+        });
+        return;
+      }
+
+      if (data?.screen === "report-detail" && data?.reportId) {
+        router.push({
+          pathname: "/report-detail",
+          params: {
+            id: String(data.reportId),
+          },
+        });
+      }
+    };
+
     const sub = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const data = response.notification.request.content.data;
-
-        if (data?.screen === "report-detail" && data?.reportId) {
-          router.push({
-            pathname: "/report-detail",
-            params: {
-              id: String(data.reportId),
-            },
-          });
-        }
+        openFromNotification(data);
       }
     );
+
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      const data = response?.notification.request.content.data;
+      if (data) {
+        openFromNotification(data);
+      }
+    });
 
     return () => sub.remove();
   }, []);
