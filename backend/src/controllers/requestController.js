@@ -381,33 +381,3 @@ exports.testApproveRequest = async (req, res) => {
   }
 };
 
-exports.debugAllRequests = async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT 
-        sr.id,
-        sr.request_no AS "requestNo",
-        sr.user_id AS "userId",
-        u.name AS "clientName",
-        u.mobile,
-        sr.service,
-        sr.project,
-        sr.status,
-        sr.created_at AS "createdAt"
-      FROM service_requests sr
-      LEFT JOIN users u ON u.id = sr.user_id
-      ORDER BY sr.created_at DESC
-      LIMIT 20`
-    );
-
-    res.json({
-      success: true,
-      data: result.rows,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};

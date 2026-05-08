@@ -80,7 +80,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       const res = await api.getRequests(user.token);
-      console.log("LIVE REQUEST REFRESH:", res);
+      
       if (res?.success && Array.isArray(res.data)) {
         const formatted: RequestItem[] = res.data.map((item: any) => ({
           id: String(item?.id || ""),

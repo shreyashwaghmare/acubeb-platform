@@ -128,4 +128,15 @@ savePushToken: async (token: string, pushToken: string) => {
 
   return res.json();
 },
+firebaseLogin: async (data: any) => {
+  const res = await fetch(`${BASE_URL}/api/auth/firebase-login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  return res.json();
+},
 };

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
+import auth, { FirebaseAuthTypes } from "@react-native-firebase/auth";
 import { useAuth } from "../context/AuthContext";
 import { router } from "expo-router";
 import { api } from "../services/api";
@@ -14,57 +15,103 @@ import { usePremiumToast } from "../components/PremiumToast";
 export default function LoginScreen() {
   const [mode, setMode] = useState<"login" | "register">("login");
   const { showToast } = usePremiumToast();
+
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
+  const [confirmation, setConfirmation] =
+    useState<FirebaseAuthTypes.ConfirmationResult | null>(null);
+
   const { login } = useAuth();
 
-  const sendOtp = () => {
-    if (mode === "register" && !name.trim()) {
-      showToast("Please enter your name", "error");
-      return;
-    }
+  const formatMobile = (value: string) => {
+    const clean = value.replace(/\D/g, "");
+    return clean.startsWith("91") ? `+${clean}` : `+91${clean}`;
+  };
 
-    if (mobile.length < 10) {
-      showToast("Enter a valid mobile number", "error");
-      return;
-    }
+  const sendOtp = async () => {
+    try {
+      if (mode === "register" && !name.trim()) {
+        showToast("Please enter your name", "error");
+        return;
+      }
 
-    setStep(2);
+      const cleanMobile = mobile.replace(/\D/g, "");
+
+      if (cleanMobile.length !== 10) {
+        showToast("Enter valid 10 digit mobile number", "error");
+        return;
+      }
+
+      setLoading(true);
+
+      const phoneNumber = formatMobile(cleanMobile);
+      console.log("Sending OTP to:", phoneNumber);
+
+      const result = await auth().signInWithPhoneNumber(phoneNumber);
+
+      setConfirmation(result);
+      setStep(2);
+      showToast("OTP sent successfully", "success");
+    } catch (error: any) {
+      console.log("SEND OTP ERROR:", error);
+      showToast(error?.message || "Failed to send OTP", "error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const verifyOtp = async () => {
-    if (otp !== "1234") {
-      showToast("Invalid OTP (use 1234)", "error");
-      return;
-    }
-
     try {
+      if (!confirmation) {
+        showToast("Please request OTP again", "error");
+        return;
+      }
+
+      if (!otp.trim()) {
+        showToast("Please enter OTP", "error");
+        return;
+      }
+
       setLoading(true);
 
-      let res;
+      const credential = await confirmation.confirm(otp.trim());
 
-      if (mode === "register") {
-        res = await api.register(name, mobile);
-      } else {
-        res = await api.login(mobile);
+      if (!credential?.user) {
+        showToast("OTP verification failed", "error");
+        return;
       }
 
-      if (res.success) {
+      const firebaseToken = await credential.user.getIdToken();
+
+      const cleanMobile = mobile.replace(/\D/g, "");
+
+      const res = await api.firebaseLogin({
+        firebaseToken,
+        mobile: cleanMobile,
+        email: credential.user.email || "",
+        name: mode === "register" ? name.trim() : credential.user.displayName || "",
+        profileImage: credential.user.photoURL || "",
+        provider: "phone",
+      });
+
+      if (res?.success) {
         showToast("Welcome to A Cube B", "success");
+
         await login(res.user.mobile, res.token, res.user.name);
+
         setTimeout(() => {
-    router.replace("/(tabs)");
-  }, 500);
+          router.replace("/(tabs)");
+        }, 500);
       } else {
-        showToast(res.message || "Something went wrong", "error");
+        showToast(res?.message || "Login failed", "error");
       }
-    } catch (error:any) {
-      showToast(error.message || "Unexpected error occurred", "error");
-  console.log("🔥 Full Error:", error);
+    } catch (error: any) {
+      console.log("VERIFY OTP ERROR:", error);
+      showToast(error?.message || "Invalid OTP", "error");
     } finally {
       setLoading(false);
     }
@@ -75,13 +122,14 @@ export default function LoginScreen() {
       <Text style={styles.logo}>A CUBE B</Text>
       <Text style={styles.subtitle}>Smart Lab Platform</Text>
 
-      {/* Toggle */}
       <View style={styles.toggle}>
         <TouchableOpacity
           style={[styles.tab, mode === "login" && styles.activeTab]}
           onPress={() => {
             setMode("login");
             setStep(1);
+            setOtp("");
+            setConfirmation(null);
           }}
         >
           <Text style={styles.tabText}>Login</Text>
@@ -92,6 +140,8 @@ export default function LoginScreen() {
           onPress={() => {
             setMode("register");
             setStep(1);
+            setOtp("");
+            setConfirmation(null);
           }}
         >
           <Text style={styles.tabText}>Register</Text>
@@ -116,26 +166,33 @@ export default function LoginScreen() {
           <Text style={styles.label}>Mobile Number</Text>
           <TextInput
             style={styles.input}
-            placeholder="Enter mobile"
+            placeholder="Enter 10 digit mobile"
             placeholderTextColor="#777"
-            keyboardType="numeric"
+            keyboardType="number-pad"
+            maxLength={10}
             value={mobile}
             onChangeText={setMobile}
           />
 
-          <TouchableOpacity style={styles.button} onPress={sendOtp}>
-            <Text style={styles.buttonText}>Send OTP</Text>
+          <TouchableOpacity
+            style={[styles.button, loading && styles.disabled]}
+            onPress={sendOtp}
+            disabled={loading}
+          >
+            <Text style={styles.buttonText}>
+              {loading ? "Sending OTP..." : "Send OTP"}
+            </Text>
           </TouchableOpacity>
         </>
       ) : (
         <>
-          <Text style={styles.info}>OTP sent to {mobile}</Text>
+          <Text style={styles.info}>OTP sent to +91 {mobile}</Text>
 
           <TextInput
             style={styles.input}
-            placeholder="Enter OTP 1234"
+            placeholder="Enter OTP"
             placeholderTextColor="#777"
-            keyboardType="numeric"
+            keyboardType="number-pad"
             value={otp}
             onChangeText={setOtp}
           />
@@ -146,11 +203,17 @@ export default function LoginScreen() {
             disabled={loading}
           >
             <Text style={styles.buttonText}>
-              {loading ? "Processing..." : "Verify"}
+              {loading ? "Verifying..." : "Verify OTP"}
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => setStep(1)}>
+          <TouchableOpacity
+            onPress={() => {
+              setStep(1);
+              setOtp("");
+              setConfirmation(null);
+            }}
+          >
             <Text style={styles.back}>Change Details</Text>
           </TouchableOpacity>
         </>
