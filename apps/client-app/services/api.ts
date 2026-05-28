@@ -1,5 +1,5 @@
 // ⚠️ IMPORTANT: replace localhost with your IP
-const BASE_URL = "https://acubeb-platform-production.up.railway.app";
+const BASE_URL = "https://acubeb-platform.onrender.com";
 
 export const api = {
   // 💡 NEW: Quick helper to check if a user profile exists in your database

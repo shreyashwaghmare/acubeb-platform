@@ -1,8 +1,14 @@
 const jwt = require("jsonwebtoken");
 const { v4: uuidv4 } = require("uuid");
 const pool = require("../config/db");
+const admin = require("../config/firebase");
 
 const createToken = (user) => {
+  // Defensive guard clause to catch environment failures early
+  if (!process.env.JWT_SECRET) {
+    throw new Error("Critical Configuration Error: JWT_SECRET environment variable is missing.");
+  }
+  
   return jwt.sign(
     { id: user.id, role: user.role, mobile: user.mobile },
     process.env.JWT_SECRET,
@@ -86,7 +92,6 @@ exports.login = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-const admin = require("../config/firebase");
 
 exports.firebaseLogin = async (req, res) => {
   try {
@@ -108,7 +113,6 @@ exports.firebaseLogin = async (req, res) => {
 
     // ✅ Verify Firebase token
     const decoded = await admin.auth().verifyIdToken(firebaseToken);
-
     const firebaseUid = decoded.uid;
 
     // ✅ Check existing user
@@ -122,6 +126,10 @@ exports.firebaseLogin = async (req, res) => {
     // ✅ Create user if not exists
     if (result.rows.length === 0) {
       const id = uuidv4();
+
+      // Avoid writing empty strings to unique constraints; write explicit nulls instead
+      const fallbackMobile = mobile && mobile.trim() !== "" ? mobile : null;
+      const fallbackEmail = email && email.trim() !== "" ? email : null;
 
       const created = await pool.query(
         `
@@ -137,7 +145,7 @@ exports.firebaseLogin = async (req, res) => {
           role
         )
         VALUES (
-          $1,$2,$3,$4,$5,$6,$7,$8,$9
+          $1, $2, $3, $4, $5, $6, $7, $8, $9
         )
         RETURNING *
         `,
@@ -146,8 +154,8 @@ exports.firebaseLogin = async (req, res) => {
           firebaseUid,
           provider || "firebase",
           true,
-          mobile || "",
-          email || "",
+          fallbackMobile,
+          fallbackEmail,
           name || "Client",
           profileImage || "",
           "client",
@@ -158,26 +166,34 @@ exports.firebaseLogin = async (req, res) => {
     } else {
       user = result.rows[0];
 
-      // ✅ Update latest profile info
-      await pool.query(
+      // ✅ Update latest profile info safely using local JavaScript evaluations
+      const updatedMobile = mobile !== undefined ? mobile : user.mobile;
+      const updatedEmail = email !== undefined ? email : user.email;
+      const updatedName = name !== undefined ? name : user.name;
+      const updatedProfileImage = profileImage !== undefined ? profileImage : user.profile_image;
+
+      const updatedResult = await pool.query(
         `
         UPDATE users
         SET
-          mobile = COALESCE($1, mobile),
-          email = COALESCE($2, email),
-          name = COALESCE($3, name),
-          profile_image = COALESCE($4, profile_image),
+          mobile = $1,
+          email = $2,
+          name = $3,
+          profile_image = $4,
           is_verified = true
         WHERE id = $5
+        RETURNING *
         `,
         [
-          mobile,
-          email,
-          name,
-          profileImage,
+          updatedMobile,
+          updatedEmail,
+          updatedName,
+          updatedProfileImage,
           user.id,
         ]
       );
+      
+      user = updatedResult.rows[0];
     }
 
     // ✅ Generate app JWT
@@ -189,7 +205,7 @@ exports.firebaseLogin = async (req, res) => {
       user,
     });
   } catch (error) {
-    console.log("FIREBASE LOGIN ERROR:", error);
+    console.error("FIREBASE LOGIN ERROR:", error);
 
     res.status(500).json({
       success: false,
