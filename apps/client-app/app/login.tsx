@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -13,19 +13,41 @@ import { api } from "../services/api";
 import { usePremiumToast } from "../components/PremiumToast";
 
 export default function LoginScreen() {
-  const [mode, setMode] = useState<"login" | "register">("login");
   const { showToast } = usePremiumToast();
+  const { login } = useAuth();
 
-  const [name, setName] = useState("");
+  // Unified State Variables
   const [mobile, setMobile] = useState("");
+  const [name, setName] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(false);
+
+  // Isolated Loading Flags to prevent UI bleeding
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+
+  // Tracks the last successfully sent number to handle smart back-routing behavior
+  const [lastSentMobile, setLastSentMobile] = useState("");
+
+  // Cooldown Tracking System
+  const [countdown, setCountdown] = useState(0);
+  const timerRef = useRef<any>(null);
 
   const [confirmation, setConfirmation] =
     useState<FirebaseAuthTypes.ConfirmationResult | null>(null);
 
-  const { login } = useAuth();
+  // Countdown background mechanism worker
+  useEffect(() => {
+    if (countdown > 0) {
+      timerRef.current = setTimeout(() => {
+        setCountdown(countdown - 1);
+      }, 1000);
+    }
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [countdown]);
 
   const formatMobile = (value: string) => {
     const clean = value.replace(/\D/g, "");
@@ -33,34 +55,52 @@ export default function LoginScreen() {
   };
 
   const sendOtp = async () => {
+    const cleanMobile = mobile.replace(/\D/g, "");
+
+    if (cleanMobile.length !== 10) {
+      showToast("Enter valid 10 digit mobile number", "error");
+      return;
+    }
+
+    // Smart Guard: If session is warm and number hasn't changed, restore screen step instantly
+    if (confirmation && countdown > 0 && cleanMobile === lastSentMobile) {
+      console.log("🔄 Active verification session found. Restoring step 2 view state.");
+      setSendingOtp(true);
+      try {
+        const userExists = await api.checkUserExists(cleanMobile);
+        setIsNewUser(!userExists);
+        setStep(2);
+        return;
+      } catch (err) {
+        // Fallback gracefully if endpoint drops
+      } finally {
+        setSendingOtp(false);
+      }
+    }
+
     try {
-      if (mode === "register" && !name.trim()) {
-        showToast("Please enter your name", "error");
-        return;
-      }
-
-      const cleanMobile = mobile.replace(/\D/g, "");
-
-      if (cleanMobile.length !== 10) {
-        showToast("Enter valid 10 digit mobile number", "error");
-        return;
-      }
-
-      setLoading(true);
-
+      setSendingOtp(true);
       const phoneNumber = formatMobile(cleanMobile);
       console.log("Sending OTP to:", phoneNumber);
 
+      // 1. Fire Firebase Handshake Request
       const result = await auth().signInWithPhoneNumber(phoneNumber);
-
       setConfirmation(result);
+      setLastSentMobile(cleanMobile);
+
+      // 2. Query your database to check if registration details are needed
+      const userExists = await api.checkUserExists(cleanMobile);
+      setIsNewUser(!userExists);
+
+      // 3. Move forward seamlessly
       setStep(2);
+      setCountdown(60); // Engage 1-minute safety lock
       showToast("OTP sent successfully", "success");
     } catch (error: any) {
       console.log("SEND OTP ERROR:", error);
       showToast(error?.message || "Failed to send OTP", "error");
     } finally {
-      setLoading(false);
+      setSendingOtp(false);
     }
   };
 
@@ -76,7 +116,13 @@ export default function LoginScreen() {
         return;
       }
 
-      setLoading(true);
+      // Guard check: Require profile setup fields ONLY if database returned unknown user
+      if (isNewUser && !name.trim()) {
+        showToast("Please enter your name / company to register", "error");
+        return;
+      }
+
+      setVerifyingOtp(true);
 
       const credential = await confirmation.confirm(otp.trim());
 
@@ -86,83 +132,71 @@ export default function LoginScreen() {
       }
 
       const firebaseToken = await credential.user.getIdToken();
-
       const cleanMobile = mobile.replace(/\D/g, "");
 
+      // Execute unified auth routing structure
       const res = await api.firebaseLogin({
         firebaseToken,
         mobile: cleanMobile,
         email: credential.user.email || "",
-        name: mode === "register" ? name.trim() : credential.user.displayName || "",
+        name: isNewUser ? name.trim() : credential.user.displayName || "Client",
         profileImage: credential.user.photoURL || "",
         provider: "phone",
       });
 
       if (res?.success) {
         showToast("Welcome to A Cube B", "success");
-
         await login(res.user.mobile, res.token, res.user.name);
-
+        
         setTimeout(() => {
           router.replace("/(tabs)");
         }, 500);
-      } else {
-        showToast(res?.message || "Login failed", "error");
+      }else if (
+        !res?.success && 
+        (res?.message?.toLowerCase().includes("duplicate") || 
+         res?.message?.toLowerCase().includes("constraint") || 
+         res?.message?.toLowerCase().includes("violation"))
+      ) {
+        console.log("🔄 Account already exists in Railway DB. Executing automatic fallback login path.");
+        
+        // Since Firebase ALREADY verified the SMS OTP, we know the user owns this device.
+        // We can safely request a clean login token directly from your backend login route.
+        const loginRes = await api.login(cleanMobile);
+        
+        if (loginRes?.success) {
+          showToast("Welcome back to A Cube B", "success");
+          await login(loginRes.user.mobile, loginRes.token, loginRes.user.name || "Client");
+          
+          setTimeout(() => {
+            router.replace("/(tabs)");
+          }, 500);
+        } else {
+          showToast(loginRes?.message || "Session conflict. Please try again.", "error");
+        }
+      }
+       else {
+        showToast(res?.message || "Authentication failed", "error");
       }
     } catch (error: any) {
       console.log("VERIFY OTP ERROR:", error);
       showToast(error?.message || "Invalid OTP", "error");
     } finally {
-      setLoading(false);
+      setVerifyingOtp(false);
     }
   };
+
+  // Determine if main step 1 action button should lock up safely
+  const isStep1CleanMobile = mobile.replace(/\D/g, "");
+  const isSessionWarm = confirmation && countdown > 0 && isStep1CleanMobile === lastSentMobile;
+  const isStep1ButtonDisabled = sendingOtp;
 
   return (
     <View style={styles.container}>
       <Text style={styles.logo}>A CUBE B</Text>
       <Text style={styles.subtitle}>Smart Lab Platform</Text>
 
-      <View style={styles.toggle}>
-        <TouchableOpacity
-          style={[styles.tab, mode === "login" && styles.activeTab]}
-          onPress={() => {
-            setMode("login");
-            setStep(1);
-            setOtp("");
-            setConfirmation(null);
-          }}
-        >
-          <Text style={styles.tabText}>Login</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tab, mode === "register" && styles.activeTab]}
-          onPress={() => {
-            setMode("register");
-            setStep(1);
-            setOtp("");
-            setConfirmation(null);
-          }}
-        >
-          <Text style={styles.tabText}>Register</Text>
-        </TouchableOpacity>
-      </View>
-
       {step === 1 ? (
-        <>
-          {mode === "register" && (
-            <>
-              <Text style={styles.label}>Name / Company</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter name"
-                placeholderTextColor="#777"
-                value={name}
-                onChangeText={setName}
-              />
-            </>
-          )}
-
+        <View style={styles.formCard}>
           <Text style={styles.label}>Mobile Number</Text>
           <TextInput
             style={styles.input}
@@ -175,19 +209,39 @@ export default function LoginScreen() {
           />
 
           <TouchableOpacity
-            style={[styles.button, loading && styles.disabled]}
+            style={[styles.button, isStep1ButtonDisabled && styles.disabled]}
             onPress={sendOtp}
-            disabled={loading}
+            disabled={isStep1ButtonDisabled}
           >
             <Text style={styles.buttonText}>
-              {loading ? "Sending OTP..." : "Send OTP"}
+              {sendingOtp 
+                ? "Sending OTP..." 
+                : isSessionWarm
+                  ? "Resume Login" // 💡 Guide them back smoothly!
+                  : "Get Started"
+              }
             </Text>
           </TouchableOpacity>
-        </>
+        </View>
       ) : (
-        <>
+        <View style={styles.formCard}>
           <Text style={styles.info}>OTP sent to +91 {mobile}</Text>
 
+          {/* DYNAMIC REGISTRATION INJECTION: Only loads if user profile is absent */}
+          {isNewUser && (
+            <>
+              <Text style={styles.label}>Name / Company</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your name to register"
+                placeholderTextColor="#777"
+                value={name}
+                onChangeText={setName}
+              />
+            </>
+          )}
+
+          <Text style={styles.label}>Verification Code</Text>
           <TextInput
             style={styles.input}
             placeholder="Enter OTP"
@@ -198,12 +252,31 @@ export default function LoginScreen() {
           />
 
           <TouchableOpacity
-            style={[styles.button, loading && styles.disabled]}
+            style={[styles.button, verifyingOtp && styles.disabled]}
             onPress={verifyOtp}
-            disabled={loading}
+            disabled={verifyingOtp}
           >
             <Text style={styles.buttonText}>
-              {loading ? "Verifying..." : "Verify OTP"}
+              {verifyingOtp ? "Verifying..." : "Verify & Login"}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Inline Cooldown Timer Action Block */}
+          <TouchableOpacity
+            style={[
+              styles.resendButton,
+              (countdown > 0 || sendingOtp || verifyingOtp) && styles.resendDisabled,
+            ]}
+            onPress={sendOtp}
+            disabled={countdown > 0 || sendingOtp || verifyingOtp}
+          >
+            <Text style={styles.resendText}>
+              {sendingOtp 
+                ? "Sending..." 
+                : countdown > 0 
+                  ? `Resend OTP in ${countdown}s` 
+                  : "Resend OTP"
+              }
             </Text>
           </TouchableOpacity>
 
@@ -211,12 +284,14 @@ export default function LoginScreen() {
             onPress={() => {
               setStep(1);
               setOtp("");
-              setConfirmation(null);
+              // We do NOT clear countdown or confirmation here, allowing 
+              // the guard clause to work if they type the same number back in.
             }}
+            disabled={sendingOtp || verifyingOtp}
           >
-            <Text style={styles.back}>Change Details</Text>
+            <Text style={styles.back}>Change Mobile Number</Text>
           </TouchableOpacity>
-        </>
+        </View>
       )}
     </View>
   );
@@ -238,26 +313,10 @@ const styles = StyleSheet.create({
   subtitle: {
     color: "#AAA",
     textAlign: "center",
-    marginBottom: 30,
+    marginBottom: 40,
   },
-  toggle: {
-    flexDirection: "row",
-    backgroundColor: "#1B1B1B",
-    borderRadius: 14,
-    marginBottom: 20,
-  },
-  tab: {
-    flex: 1,
-    padding: 12,
-    alignItems: "center",
-  },
-  activeTab: {
-    backgroundColor: "#D4AF37",
-    borderRadius: 14,
-  },
-  tabText: {
-    color: "#FFF",
-    fontWeight: "800",
+  formCard: {
+    width: "100%",
   },
   label: {
     color: "#D4AF37",
@@ -269,20 +328,21 @@ const styles = StyleSheet.create({
     color: "#FFF",
     padding: 15,
     borderRadius: 14,
-    marginBottom: 12,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: "#333",
   },
   info: {
     color: "#AAA",
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: 16,
+    fontWeight: "600",
   },
   button: {
     backgroundColor: "#D4AF37",
     padding: 15,
     borderRadius: 14,
-    marginTop: 10,
+    marginTop: 5,
   },
   disabled: {
     opacity: 0.6,
@@ -291,11 +351,25 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "900",
     color: "#111",
+    fontSize: 16,
+  },
+  resendButton: {
+    marginTop: 15,
+    padding: 10,
+    alignItems: "center",
+  },
+  resendDisabled: {
+    opacity: 0.5,
+  },
+  resendText: {
+    color: "#D4AF37",
+    fontWeight: "800",
   },
   back: {
-    color: "#D4AF37",
+    color: "#AAA",
     textAlign: "center",
     marginTop: 16,
-    fontWeight: "800",
+    fontWeight: "700",
+    textDecorationLine: "underline",
   },
 });
