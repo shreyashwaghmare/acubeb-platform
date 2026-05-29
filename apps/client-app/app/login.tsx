@@ -83,8 +83,9 @@ export default function LoginScreen() {
       const phoneNumber = formatMobile(cleanMobile);
       console.log("Sending OTP to:", phoneNumber);
 
-      // 1. Fire Firebase Handshake Request
+      // ✅ Clean native sign-in handshake
       const result = await auth().signInWithPhoneNumber(phoneNumber);
+      
       setConfirmation(result);
       setLastSentMobile(cleanMobile);
 
@@ -151,16 +152,13 @@ export default function LoginScreen() {
         setTimeout(() => {
           router.replace("/(tabs)");
         }, 500);
-      }else if (
+      } else if (
         !res?.success && 
         (res?.message?.toLowerCase().includes("duplicate") || 
          res?.message?.toLowerCase().includes("constraint") || 
          res?.message?.toLowerCase().includes("violation"))
       ) {
-        console.log("🔄 Account already exists in Railway DB. Executing automatic fallback login path.");
-        
-        // Since Firebase ALREADY verified the SMS OTP, we know the user owns this device.
-        // We can safely request a clean login token directly from your backend login route.
+        console.log("🔄 Account already exists in DB. Executing automatic fallback login path.");
         const loginRes = await api.login(cleanMobile);
         
         if (loginRes?.success) {
@@ -173,8 +171,7 @@ export default function LoginScreen() {
         } else {
           showToast(loginRes?.message || "Session conflict. Please try again.", "error");
         }
-      }
-       else {
+      } else {
         showToast(res?.message || "Authentication failed", "error");
       }
     } catch (error: any) {
@@ -217,7 +214,7 @@ export default function LoginScreen() {
               {sendingOtp 
                 ? "Sending OTP..." 
                 : isSessionWarm
-                  ? "Resume Login" // 💡 Guide them back smoothly!
+                  ? "Resume Login" 
                   : "Get Started"
               }
             </Text>
@@ -227,7 +224,7 @@ export default function LoginScreen() {
         <View style={styles.formCard}>
           <Text style={styles.info}>OTP sent to +91 {mobile}</Text>
 
-          {/* DYNAMIC REGISTRATION INJECTION: Only loads if user profile is absent */}
+          {/* DYNAMIC REGISTRATION INJECTION */}
           {isNewUser && (
             <>
               <Text style={styles.label}>Name / Company</Text>
@@ -284,8 +281,6 @@ export default function LoginScreen() {
             onPress={() => {
               setStep(1);
               setOtp("");
-              // We do NOT clear countdown or confirmation here, allowing 
-              // the guard clause to work if they type the same number back in.
             }}
             disabled={sendingOtp || verifyingOtp}
           >

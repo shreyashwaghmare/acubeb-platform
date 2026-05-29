@@ -1,0 +1,14 @@
+# Ignore dependency folders
+node_modules/
+
+# Ignore local build caches
+.expo/
+.eas/
+.git/
+
+# Ignore native compilation folders
+android/
+ios/
+
+# Ignore backend folder if your monorepo contains it here
+backend/
