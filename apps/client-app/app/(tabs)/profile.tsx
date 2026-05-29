@@ -12,14 +12,16 @@ export default function ProfileScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const { client } = useAppContext();
   const { logout } = useAuth();
+
   useFocusEffect(
-  useCallback(() => {
-    scrollRef.current?.scrollTo({
-      y: 0,
-      animated: false,
-    });
-  }, [])
-);
+    useCallback(() => {
+      scrollRef.current?.scrollTo({
+        y: 0,
+        animated: false,
+      });
+    }, [])
+  );
+
   const handleLogout = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     await logout();
@@ -38,16 +40,20 @@ export default function ProfileScreen() {
     </View>
   );
 
+  // 🌟 Safe Fallback Guard extraction to prevent background layout shifting
+  const clientName = client?.name && client.name.trim() !== "" ? client.name : "Premium Client";
+  const avatarLetter = clientName.charAt(0).toUpperCase();
+
   return (
     <View style={styles.container}>
-      <ScrollView  ref={scrollRef} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         
         {/* EXECUTIVE HEADER */}
         <Animated.View entering={FadeInUp.delay(100).springify()} style={styles.headerSection}>
           <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>{client?.name?.charAt(0) || "C"}</Text>
+            <Text style={styles.avatarText}>{avatarLetter}</Text>
           </View>
-          <Text style={styles.clientName}>{client?.name || "Premium Client"}</Text>
+          <Text style={styles.clientName}>{clientName}</Text>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>VERIFIED CORPORATE ACCOUNT</Text>
           </View>
@@ -68,7 +74,7 @@ export default function ProfileScreen() {
         <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.bentoCard}>
           <Text style={styles.sectionTitle}>REGISTERED ADDRESS</Text>
           <View style={styles.addressWrapper}>
-            <Ionicons name="location-outline" size={18} color="#555" />
+            <Ionicons name="location-outline" size={18} color="#555" style={{ marginTop: 2 }} />
             <Text style={styles.addressText}>{client?.address || "No address on file"}</Text>
           </View>
         </Animated.View>
@@ -81,12 +87,13 @@ export default function ProfileScreen() {
               Haptics.selectionAsync();
               router.push("/edit-profile");
             }}
+            activeOpacity={0.85}
           >
             <Ionicons name="create-outline" size={18} color="#111" />
             <Text style={styles.editButtonText}>Edit Profile</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.85}>
             <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
         </Animated.View>

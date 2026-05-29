@@ -1,0 +1,206 @@
+{
+  "categories": [
+    {
+      "id": "cat_consultancy_pmc",
+      "name": "Engineering Consultancy & PMC",
+      "icon": "🏛️",
+      "tag": "STRATEGIC",
+      "desc": "Structural health audits, project management consultancy, and master design frameworks",
+      "subCategories": [
+        {
+          "id": "sub_structural_audits",
+          "name": "Structural Audits & Safety Verification",
+          "tests": [
+            { "id": "t_aud_safety", "name": "Structural Health & Stability Audit", "code": "IS 15916 / National Building Code", "formLayout": "consultancy", "unit": "Visits" },
+            { "id": "t_aud_ndt", "name": "Non-Destructive Testing (NDT) Assessment", "code": "IS 13311 (Rebound Hammer / UPV)", "formLayout": "consultancy", "unit": "Visits" },
+            { "id": "t_aud_fire", "name": "Fire Safety Audit & Load Compliance", "code": "National Fire Protection Protocol", "formLayout": "consultancy", "unit": "Visits" }
+          ]
+        },
+        {
+          "id": "sub_pmc_supervision",
+          "name": "Project Management Consultancy (PMC)",
+          "tests": [
+            { "id": "t_pmc_supervision", "name": "Comprehensive Site Supervision & Quality Control", "code": "Quality Assurance Manual Guidelines", "formLayout": "consultancy", "unit": "Months" },
+            { "id": "t_pmc_dpr", "name": "Detailed Project Report (DPR) & Feasibility Studies", "code": "IRC / MoRT&H Design Standards", "formLayout": "consultancy", "unit": "Reports" },
+            { "id": "t_pmc_bridge", "name": "Bridge & Major Highway Structural Consultancy", "code": "IRC Section 5 / Section 112 Codes", "formLayout": "consultancy", "unit": "Reports" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cat_ogl",
+      "name": "Original Ground Level (OGL)",
+      "icon": "🌱",
+      "tag": "OGL",
+      "desc": "Initial site strata clearance & base preparation testing",
+      "subCategories": [
+        {
+          "id": "sub_ogl_all",
+          "name": "Base Stratum Analysis",
+          "tests": [
+            { "id": "t_ogl_grain", "name": "Grain Size Analysis", "code": "IS 2720 (Part 4)", "formLayout": "linear", "unit": "m" },
+            { "id": "t_ogl_limit", "name": "Liquid Limit / Plasticity Index", "code": "IS 2720 (Part 5)", "formLayout": "linear", "unit": "m" },
+            { "id": "t_ogl_proctor", "name": "Proctor Density Test", "code": "IS 2720 (Part 8)", "formLayout": "linear", "unit": "m" },
+            { "id": "t_ogl_cbr", "name": "CBR Test (Soaked/Unsoaked)", "code": "IS 2720 (Part 16)", "formLayout": "linear", "unit": "m" },
+            { "id": "t_ogl_compaction", "name": "Field Compaction Quality", "code": "IS 2720 (Part 28)", "formLayout": "planar", "unit": "sqm" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cat_emb",
+      "name": "Embankment & Subgrade",
+      "icon": "⏳",
+      "tag": "EMB / SG",
+      "desc": "MoRT&H Section 300 earthwork & borrow materials stability",
+      "subCategories": [
+        {
+          "id": "sub_emb_body",
+          "name": "Earthwork Layer Testing",
+          "tests": [
+            { "id": "t_emb_grain", "name": "Grain Size Analysis", "code": "MoRT&H Cl. 903.2.1", "formLayout": "volumetric", "unit": "cum" },
+            { "id": "t_emb_proctor", "name": "Proctor Density Verification", "code": "IS 2720 (Part 8)", "formLayout": "volumetric", "unit": "cum" },
+            { "id": "t_emb_moisture", "name": "Moisture Content Profile", "code": "MoRT&H Cl. 21.2", "formLayout": "volumetric", "unit": "cum" },
+            { "id": "t_emb_compaction", "name": "Field Compaction Density", "code": "MoRT&H Cl. 903.2.2", "formLayout": "planar", "unit": "sqm" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cat_gsb",
+      "name": "Granular Sub Base & WMM",
+      "icon": "🛣️",
+      "tag": "BASE-LAYERS",
+      "desc": "MoRT&H Section 400 granular pavements & grading matrices",
+      "subCategories": [
+        {
+          "id": "sub_gsb_grading",
+          "name": "Granular Sub Base (GSB)",
+          "tests": [
+            { "id": "t_gsb_gradation", "name": "Gradation Analysis", "code": "MoRT&H Table 400-1", "formLayout": "volumetric", "unit": "cum" },
+            { "id": "t_gsb_impact", "name": "Aggregate Impact Value (AIV)", "code": "IS 2386 (Part 4)", "formLayout": "volumetric", "unit": "cum" },
+            { "id": "t_gsb_compaction", "name": "Sub-Base Field Compaction", "code": "MoRT&H Cl. 401.3.2", "formLayout": "volumetric", "unit": "cum" }
+          ]
+        },
+        {
+          "id": "sub_wmm_layers",
+          "name": "Wet Mix Macadam (WMM)",
+          "tests": [
+            { "id": "t_wmm_gradation", "name": "Gradation of Aggregates", "code": "MoRT&H Table 400-13", "formLayout": "volumetric", "unit": "cum" },
+            { "id": "t_wmm_proctor", "name": "Proctor Density & OMC", "code": "IS 2720 (Part 8)", "formLayout": "volumetric", "unit": "cum" },
+            { "id": "t_wmm_abrasion", "name": "Los Angeles Abrasion Value", "code": "IS 2386 (Part 4)", "formLayout": "volumetric", "unit": "cum" },
+            { "id": "t_wmm_flakiness", "name": "Combined Flakiness & Elongation", "code": "IS 2720 (Part 1)", "formLayout": "volumetric", "unit": "cum" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cat_bitumen_raw",
+      "name": "Bitumen & Emulsions",
+      "icon": "🛢️",
+      "tag": "BINDERS",
+      "desc": "Viscosity grade binders, prime coats, and tack coats compliance",
+      "subCategories": [
+        {
+          "id": "sub_bit_vg40",
+          "name": "Bitumen (VG-40)",
+          "tests": [
+            { "id": "t_bit_visc60", "name": "Absolute Viscosity @60°C", "code": "IS 1206 (Part 2)", "formLayout": "statutory", "unit": "Bulker" },
+            { "id": "t_bit_visc135", "name": "Kinematic Viscosity @135°C", "code": "IS 1206 (Part 3)", "formLayout": "statutory", "unit": "Bulker" },
+            { "id": "t_bit_pen", "name": "Penetration @25°C", "code": "IS 1203", "formLayout": "statutory", "unit": "Bulker" },
+            { "id": "t_bit_soften", "name": "Softening Point", "code": "IS 1205", "formLayout": "statutory", "unit": "Bulker" }
+          ]
+        },
+        {
+          "id": "sub_emulsion_prime",
+          "name": "Emulsions (SS-1 & RS-1)",
+          "tests": [
+            { "id": "t_em_visc25", "name": "Viscosity @25°C (SS-1)", "code": "IS 3117", "formLayout": "statutory", "unit": "Bulker" },
+            { "id": "t_em_residue", "name": "Residue by Evaporation", "code": "IS 8887 (Annex J)", "formLayout": "statutory", "unit": "Bulker" },
+            { "id": "t_em_prime", "name": "Prime Coat Application Rate", "code": "MoRT&H Table 900-4", "formLayout": "planar", "unit": "sqm" },
+            { "id": "t_em_tack", "name": "Tack Coat Application Rate", "code": "MoRT&H Table 900-4", "formLayout": "planar", "unit": "sqm" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cat_bit_mixes",
+      "name": "Bituminous Pavements",
+      "icon": "🔲",
+      "tag": "ASPHALT",
+      "desc": "Base, binder and wearing courses (BM, DBM, and Asphalt Concrete)",
+      "subCategories": [
+        {
+          "id": "sub_mix_bm",
+          "name": "Bituminous Macadam (BM)",
+          "tests": [
+            { "id": "t_bm_gradation", "name": "Gradation Stream Analysis", "code": "MoRT&H Table 500-7", "formLayout": "volumetric", "unit": "cum" },
+            { "id": "t_bm_binder", "name": "Binder Content Extraction", "code": "AASHTO T 164", "formLayout": "volumetric", "unit": "cum" },
+            { "id": "t_bm_density", "name": "Density of Compacted Layer", "code": "ASTM D 2726", "formLayout": "planar", "unit": "sqm" }
+          ]
+        },
+        {
+          "id": "sub_mix_dbm",
+          "name": "Dense Bituminous Macadam (DBM)",
+          "tests": [
+            { "id": "t_dbm_marshall", "name": "Marshall Stability & Flow Test", "code": "MS-2 / MoRT&H Table 500-11", "formLayout": "weight", "unit": "tonnes" },
+            { "id": "t_dbm_aiv", "name": "Aggregate Impact Value / LAV", "code": "IS 2386 (Part 4)", "formLayout": "volumetric", "unit": "cum" },
+            { "id": "t_dbm_binder", "name": "Binder Content Design", "code": "MoRT&H Table 500-10", "formLayout": "weight", "unit": "tonnes" }
+          ]
+        },
+        {
+          "id": "sub_mix_bc",
+          "name": "Bituminous Concrete (BC)",
+          "tests": [
+            { "id": "t_bc_marshall", "name": "Marshall Design Optimization", "code": "MoRT&H Table 500-17", "formLayout": "weight", "unit": "tonnes" },
+            { "id": "t_bc_density", "name": "Compacted Layer Layer Core Density", "code": "MoRT&H Cl. 507.3.5", "formLayout": "planar", "unit": "sqm" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cat_concrete_structures",
+      "name": "Concrete & Rigid Pavements",
+      "icon": "🏗️",
+      "tag": "RIGID-INFRA",
+      "desc": "Structural concrete works, DLC bases, PQC mixes, and raw cement matrices",
+      "subCategories": [
+        {
+          "id": "sub_concrete_works",
+          "name": "Structural Concrete Works",
+          "tests": [
+            { "id": "t_con_compressive", "name": "Cube Compressive Strength (M15-M60)", "code": "IS 516", "formLayout": "statutory", "unit": "Cubes" },
+            { "id": "t_con_gradation", "name": "Coarse & Fine Aggregate Gradation", "code": "IS 383-2016 Table 7", "formLayout": "statutory", "unit": "days" },
+            { "id": "t_con_aiv", "name": "Aggregate Impact Value (AIV)", "code": "IS 2386 (Part 4)", "formLayout": "statutory", "unit": "days" }
+          ]
+        },
+        {
+          "id": "sub_cement_materials",
+          "name": "Cement Physical Verification",
+          "tests": [
+            { "id": "t_cem_setting", "name": "Initial & Final Setting Time", "code": "IS 4031 (Part 5)", "formLayout": "statutory", "unit": "Batches" },
+            { "id": "t_cem_fineness", "name": "Fineness Blaine Air Permeability", "code": "IS 4031 (Part 1)", "formLayout": "statutory", "unit": "Batches" },
+            { "id": "t_cem_strength", "name": "Compressive Strength (3/7/28 Days)", "code": "IS 4031 (Part 6)", "formLayout": "statutory", "unit": "Batches" }
+          ]
+        },
+        {
+          "id": "sub_pavement_dlc",
+          "name": "Dry Lean Concrete (DLC)",
+          "tests": [
+            { "id": "t_dlc_strength", "name": "Compressive Strength @7 Days (Min 10 MPa)", "code": "IS 516 / MoRT&H Cl. 601.3.4", "formLayout": "planar", "unit": "sqm" },
+            { "id": "t_dlc_compaction", "name": "Field Compaction Test (Min 98%)", "code": "MoRT&H Cl. 601.6.5", "formLayout": "planar", "unit": "sqm" }
+          ]
+        },
+        {
+          "id": "sub_pavement_pqc",
+          "name": "Pavement Quality Concrete (PQC)",
+          "tests": [
+            { "id": "t_pqc_flexural", "name": "Flexural Strength Beam Test (Min 4.5 MPa)", "code": "IS 516 / MoRT&H Cl. 602.3.3", "formLayout": "volumetric", "unit": "cum" },
+            { "id": "t_pqc_compressive", "name": "Core Compressive Strength (Min 40 MPa)", "code": "IS 516", "formLayout": "volumetric", "unit": "cum" },
+            { "id": "t_pqc_texture", "name": "Texture Depth (Sand Patch Method)", "code": "MoRT&H Cl. 602.12", "formLayout": "statutory", "unit": "days" }
+          ]
+        }
+      ]
+    }
+  ]
+}

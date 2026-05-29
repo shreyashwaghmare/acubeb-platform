@@ -181,7 +181,7 @@ export default function RequestDetail() {
       <Text style={styles.heading}>Service Tracking</Text>
 
       <Animated.View entering={FadeInDown.duration(400)} style={styles.heroCard}>
-        <Text style={styles.requestNo}>{request?.requestNo || "ACB-REQ"}</Text>
+        <Text style={styles.requestNo}>{request?.requestNo || `ACB-REQ-${String(id).slice(0,5).toUpperCase()}`}</Text>
         <Text style={styles.service}>{request?.service || "Service Request"}</Text>
 
         <View style={[styles.statusPill, { backgroundColor: statusColor }]}>
@@ -216,11 +216,31 @@ export default function RequestDetail() {
         </View>
       </Animated.View>
 
+      {/* 🌟 UPGRADED PROJECT & MATERIAL CONTROL MATRIX CARD */}
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Project Information</Text>
-        <InfoRow label="Project" value={request?.project} />
-        <InfoRow label="Site Address" value={request?.site} />
+        <Text style={styles.sectionTitle}>Project & Material Specification</Text>
+        
+        <InfoRow label="Project / Subcontractor" value={request?.project} />
+        <InfoRow label="Site Range / Location" value={request?.site} />
+        
+        {/* Dynamic tracking metrics mapped from form metadata */}
+        {!!request?.sample_qty && (
+          <InfoRow label="Target Scope Volume / Qty" value={request.sample_qty} />
+        )}
+        
+        {!!request?.contact_person && (
+          <InfoRow label="Site In-Charge / POC" value={request.contact_person} />
+        )}
+
         <InfoRow label="Request Date" value={request?.date} />
+
+        {/* Display instructions block if present */}
+        {!!request?.remarks && (
+          <View style={styles.instructionBlock}>
+            <Text style={styles.instructionLabel}>INITIAL SITE INSTRUCTIONS</Text>
+            <Text style={styles.instructionText}>{request.remarks}</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.sectionHeader}>
@@ -443,7 +463,7 @@ const styles = StyleSheet.create({
     borderColor: "#222",
   },
   requestNo: { color: "#D4AF37", fontWeight: "900", opacity: 0.8 },
-  service: { color: "#FFF", fontSize: 24, fontWeight: "900", marginTop: 8 },
+  service: { color: "#FFF", fontSize: 22, fontWeight: "900", marginTop: 8, lineHeight: 28 },
   statusPill: {
     alignSelf: "flex-start",
     paddingVertical: 6,
@@ -508,6 +528,8 @@ const styles = StyleSheet.create({
     padding: 18,
     borderRadius: 20,
     marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "#1A1A1A"
   },
   sectionTitle: {
     color: "#D4AF37",
@@ -523,6 +545,25 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   infoValue: { color: "#EEE", fontSize: 15, fontWeight: "700", marginTop: 2 },
+  instructionBlock: {
+    marginTop: 16,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: "#222"
+  },
+  instructionLabel: {
+    color: "#444",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1
+  },
+  instructionText: {
+    color: "#AAA",
+    fontSize: 13,
+    fontWeight: "600",
+    marginTop: 6,
+    lineHeight: 18
+  },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",

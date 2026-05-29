@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from "react-native";
 import { useAppContext } from "../context/AppContext";
 import { router } from "expo-router";
@@ -9,7 +9,7 @@ import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from "@expo/vector-icons";
 
-// CORRECTED: Moved outside to prevent re-mounting and losing keyboard focus
+// Moved outside to prevent re-mounting and losing keyboard focus
 const InputField = ({ label, value, onChangeText, placeholder, keyboardType, autoCapitalize, multiline }: any) => (
   <View style={styles.inputGroup}>
     <Text style={styles.inputLabel}>{label}</Text>
@@ -17,12 +17,11 @@ const InputField = ({ label, value, onChangeText, placeholder, keyboardType, aut
       style={[styles.input, multiline && styles.textArea]}
       placeholder={placeholder}
       placeholderTextColor="#444"
-      value={value}
+      value={value || ""}
       onChangeText={onChangeText}
       keyboardType={keyboardType || "default"}
       autoCapitalize={autoCapitalize || "none"}
       multiline={multiline}
-      // Dubai 2026 UX: Disable annoying auto-correct for technical fields
       autoCorrect={false}
       spellCheck={false}
     />
@@ -32,9 +31,17 @@ const InputField = ({ label, value, onChangeText, placeholder, keyboardType, aut
 export default function EditProfile() {
   const { client, updateClient } = useAppContext();
   const { user } = useAuth();
-  const [form, setForm] = useState(client || {}); // Guard against null client
-  const [loading, setLoading] = useState(false);
   const { showToast } = usePremiumToast();
+  
+  const [form, setForm] = useState<any>(client || {});
+  const [loading, setLoading] = useState(false);
+
+  // 🌟 FIX: Synchronize form internal state dynamically if the context updates in the background
+  useEffect(() => {
+    if (client) {
+      setForm(client);
+    }
+  }, [client]);
 
   const save = async () => {
     if (!user?.token) {
@@ -80,7 +87,7 @@ export default function EditProfile() {
         
         {/* HEADER SECTION */}
         <Animated.View entering={FadeInUp.delay(100)} style={styles.headerArea}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.85}>
             <Ionicons name="arrow-back" size={20} color="#D4AF37" />
           </TouchableOpacity>
           <Text style={styles.metaLabel}>ACCOUNT SETTINGS</Text>
@@ -137,7 +144,7 @@ export default function EditProfile() {
             style={[styles.saveButton, loading && styles.disabledButton]} 
             onPress={save}
             disabled={loading}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
           >
             {loading ? (
               <ActivityIndicator color="#000" />
@@ -145,7 +152,8 @@ export default function EditProfile() {
               <Text style={styles.saveButtonText}>SAVE CONFIGURATION</Text>
             )}
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.back()} style={styles.cancelBtn}>
+          
+          <TouchableOpacity onPress={() => router.back()} style={styles.cancelBtn} activeOpacity={0.7}>
             <Text style={styles.cancelBtnText}>Discard Changes</Text>
           </TouchableOpacity>
         </Animated.View>

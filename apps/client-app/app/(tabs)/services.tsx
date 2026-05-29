@@ -1,57 +1,52 @@
-import { ScrollView, Text, View, StyleSheet, TouchableOpacity, TextInput, Dimensions } from "react-native";
+import { ScrollView, Text, View, StyleSheet, TouchableOpacity, TextInput } from "react-native";
 import { router } from "expo-router";
 import { useState } from "react";
-import Animated, { FadeInDown, FadeInRight, LinearTransition, FadeIn } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeInRight, LinearTransition } from "react-native-reanimated";
 import * as Haptics from 'expo-haptics';
 
-const { width } = Dimensions.get("window");
-
-// Professional Service Taxonomy - 2026 Level
-const SERVICES = [
-  { id: "1", name: "Structural Audit", icon: "🏛️", desc: "Safety, stability & health assessment", tag: "AUDIT" },
-  { id: "2", name: "NABL Material Testing", icon: "🧪", desc: "ISO/IEC 17025 certified analysis", tag: "CERTIFIED" },
-  { id: "3", name: "Concrete Testing", icon: "🧱", desc: "Compressive strength & NDT analysis", tag: "CORE" },
-  { id: "4", name: "Soil Testing", icon: "🌱", desc: "Geotechnical strata & SBC reports", tag: "GEOTECH" },
-  { id: "5", name: "Bitumen / Road Testing", icon: "🛣️", desc: "Pavement quality & mix design", tag: "INFRA" },
-  { id: "6", name: "Steel / TMT Testing", icon: "🏗️", desc: "Tensile, bend & chemical verification", tag: "MATERIAL" },
-  { id: "7", name: "Project Management", icon: "📋", desc: "Strategic PMC & site supervision", tag: "PMC" },
-  { id: "8", name: "DPR & Bridge Consultancy", icon: "🌉", desc: "Feasibility & structural consultancy", tag: "DESIGN" },
-];
+import serviceData from "../../data/services.json";
 
 export default function ServicesScreen() {
   const [search, setSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
-  // Safer Search Logic: Accounts for whitespace and casing
-  const filteredServices = SERVICES.filter(s => {
+  const filteredCategories = serviceData.categories.filter(cat => {
     const query = search.trim().toLowerCase();
-    return s.name.toLowerCase().includes(query) || s.tag.toLowerCase().includes(query);
+    if (!query) return true;
+
+    const matchCat = cat.name.toLowerCase().includes(query) || cat.tag.toLowerCase().includes(query);
+    const matchTests = cat.subCategories.some(sub => 
+      sub.name.toLowerCase().includes(query) || 
+      sub.tests.some(t => t.name.toLowerCase().includes(query) || t.code.toLowerCase().includes(query))
+    );
+
+    return matchCat || matchTests;
   });
 
-  const handlePress = (serviceName: string) => {
+  const handleTestSelection = (testName: string, code: string, formLayout: string, unit: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push({
       pathname: "/apply-service",
-      params: { service: serviceName },
+      params: { 
+        service: testName,
+        code: code,
+        formLayout: formLayout,
+        unit: unit
+      },
     });
   };
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
-      >
-        {/* ENHANCED HEADER */}
-        <Animated.View
-          entering={FadeInDown.duration(600)}
-          style={styles.header}
-        >
-          <Text style={styles.metaLabel}>ENGINEERING SERVICES</Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+        
+        <Animated.View entering={FadeInDown.duration(600)} style={styles.header}>
+          <Text style={styles.metaLabel}>MoRT&H 5TH REVISION TAXONOMY</Text>
           <Text style={styles.heading}>Service Hub</Text>
 
           <View style={styles.searchContainer}>
             <TextInput
-              placeholder="Search services or testing types..."
+              placeholder="Search e.g. VG-40, DBM, PQC, IS 516..."
               placeholderTextColor="#444"
               style={styles.searchInput}
               value={search}
@@ -61,185 +56,97 @@ export default function ServicesScreen() {
           </View>
         </Animated.View>
 
-        {/* EMPTY STATE HANDLING WITH QUICK CHIPS */}
-        {filteredServices.length === 0 ? (
-          <Animated.View
-            entering={FadeIn.duration(400)}
-            style={styles.emptyContainer}
-          >
-            <View style={styles.emptyIconWrapper}>
-              <Text style={styles.emptyIcon}>🔍</Text>
-            </View>
+        {filteredCategories.map((category, idx) => {
+          const isExpanded = activeCategory === category.id || search.trim().length > 0;
 
-            <Text style={styles.emptyTitle}>No Services Found</Text>
-            <Text style={styles.emptySub}>
-              {`We couldn't find anything matching "${search}"`}
-            </Text>
-
-            <View style={styles.suggestionBox}>
-              <Text style={styles.suggestionLabel}>QUICK SEARCH:</Text>
-              <View style={styles.chipRow}>
-                {["Material", "Road", "Audit"].map((term) => (
-                  <TouchableOpacity
-                    key={term}
-                    style={styles.suggestionChip}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      setSearch(term);
-                    }}
-                  >
-                    <Text style={styles.suggestionChipText}>{term}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            <TouchableOpacity
-              onPress={() => setSearch("")}
-              style={styles.resetBtn}
+          return (
+            <Animated.View 
+              key={category.id}
+              entering={FadeInRight.delay(idx * 40).springify()}
+              layout={LinearTransition.springify()}
+              style={styles.categoryCard}
             >
-              <Text style={styles.resetText}>Reset Catalog</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        ) : (
-          <View style={styles.grid}>
-            {filteredServices.map((item, index) => (
-              <Animated.View
-                key={item.id}
-                entering={FadeInRight.delay(index * 40).springify()}
-                layout={LinearTransition.springify()}
-                style={styles.cardWrapper}
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setActiveCategory(activeCategory === category.id ? null : category.id);
+                }}
+                style={styles.categoryHeader}
               >
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  style={styles.card}
-                  onPress={() => handlePress(item.name)}
-                >
-                  <View style={styles.cardTop}>
-                    <View style={styles.iconContainer}>
-                      <Text style={styles.iconText}>{item.icon}</Text>
-                    </View>
-                    <View style={styles.tag}>
-                      <Text style={styles.tagText}>{item.tag}</Text>
-                    </View>
+                <View style={styles.headerLeft}>
+                  <Text style={styles.catIcon}>{category.icon || "🧱"}</Text>
+                  <View style={{ marginLeft: 14, flex: 1 }}>
+                    <Text style={styles.catTitle}>{category.name}</Text>
+                    <Text style={styles.catDesc} numberOfLines={1}>{category.desc}</Text>
                   </View>
+                </View>
+                <View style={styles.headerRight}>
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{category.tag}</Text>
+                  </View>
+                  <Text style={styles.arrowIcon}>{isExpanded ? "▲" : "▼"}</Text>
+                </View>
+              </TouchableOpacity>
 
-                  <View style={styles.contentArea}>
-                    <Text style={styles.title}>{item.name}</Text>
-                    <Text style={styles.desc}>{item.desc}</Text>
-                  </View>
-
-                  <View style={styles.footer}>
-                    <Text style={styles.applyText}>Initiate Request</Text>
-                    <Text style={styles.arrow}>→</Text>
-                  </View>
-                </TouchableOpacity>
-              </Animated.View>
-            ))}
-          </View>
-        )}
+              {isExpanded && (
+                <View style={styles.expandedContent}>
+                  {category.subCategories.map(sub => (
+                    <View key={sub.id} style={styles.subBlock}>
+                      <Text style={styles.subBlockTitle}>{sub.name.toUpperCase()}</Text>
+                      
+                      {sub.tests.map(test => (
+                        <TouchableOpacity
+                          key={test.id}
+                          style={styles.testItemRow}
+                          onPress={() => handleTestSelection(test.name, test.code, test.formLayout, test.unit)}
+                        >
+                          <View style={{ flex: 1, paddingRight: 10 }}>
+                            <Text style={styles.testName}>{test.name}</Text>
+                            <Text style={styles.testCode}>{test.code}</Text>
+                          </View>
+                          <View style={styles.actionChip}>
+                            <Text style={styles.actionChipText}>Select →</Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ))}
+                </View>
+              )}
+            </Animated.View>
+          );
+        })}
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#080808", paddingHorizontal: 18 },
-  
-  // Header Style
-  header: { marginTop: 60, marginBottom: 20 },
-  metaLabel: { color: "#555", fontSize: 10, fontWeight: "900", letterSpacing: 2 },
-  heading: { color: "#D4AF37", fontSize: 32, fontWeight: "900", marginTop: 5 },
-  
-  searchContainer: { 
-    backgroundColor: "#121212", 
-    height: 52, 
-    borderRadius: 16, 
-    marginTop: 22, 
-    paddingHorizontal: 16, 
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#1A1A1A',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-  },
-  searchInput: { color: "#FFF", fontSize: 14, flex: 1, fontWeight: "500" },
+  container: { flex: 1, backgroundColor: "#080808", paddingHorizontal: 16 },
+  header: { marginTop: 60, marginBottom: 15 },
+  metaLabel: { color: "#555", fontSize: 9, fontWeight: "900", letterSpacing: 1.5 },
+  heading: { color: "#D4AF37", fontSize: 32, fontWeight: "900", marginTop: 4 },
+  searchContainer: { backgroundColor: "#111", height: 52, borderRadius: 16, marginTop: 15, paddingHorizontal: 16, justifyContent: 'center', borderWidth: 1, borderColor: '#1A1A1A' },
+  searchInput: { color: "#FFF", fontSize: 14, fontWeight: "500" },
 
-  // Empty State Logic
-  emptyContainer: { marginTop: 60, alignItems: 'center', paddingHorizontal: 30 },
-  emptyIconWrapper: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#111',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#1A1A1A'
-  },
-  emptyIcon: { fontSize: 40 },
-  emptyTitle: { color: "#FFF", fontSize: 20, fontWeight: "900" },
-  emptySub: { color: "#555", fontSize: 14, textAlign: 'center', marginTop: 8 },
+  categoryCard: { backgroundColor: "#111", borderRadius: 24, marginBottom: 12, borderWidth: 1, borderColor: "#1A1A1A", overflow: 'hidden' },
+  categoryHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  catIcon: { fontSize: 24 },
+  catTitle: { color: "#FFF", fontSize: 15, fontWeight: "800" },
+  catDesc: { color: "#555", fontSize: 11, marginTop: 3, fontWeight: "600" },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  badge: { backgroundColor: '#D4AF3710', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#D4AF3720' },
+  badgeText: { color: '#D4AF37', fontSize: 8, fontWeight: '900', letterSpacing: 0.5 },
+  arrowIcon: { color: "#D4AF37", fontSize: 10, width: 12, textAlign: 'center' },
 
-  suggestionBox: { marginTop: 30, alignItems: 'center', width: '100%' },
-  suggestionLabel: { color: '#444', fontSize: 10, fontWeight: '900', letterSpacing: 1.5, marginBottom: 12 },
-  chipRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap', justifyContent: 'center' },
-  suggestionChip: { 
-    backgroundColor: '#161616', 
-    paddingHorizontal: 16, 
-    paddingVertical: 8, 
-    borderRadius: 12, 
-    borderWidth: 1, 
-    borderColor: '#222' 
-  },
-  suggestionChipText: { color: '#D4AF37', fontSize: 12, fontWeight: '700' },
-
-  resetBtn: { 
-    marginTop: 40, 
-    paddingVertical: 12, 
-    paddingHorizontal: 24, 
-    borderRadius: 16, 
-    backgroundColor: "#D4AF37",
-    shadowColor: "#D4AF37",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-  },
-  resetText: { color: "#000", fontWeight: "900", fontSize: 14, textTransform: 'uppercase' },
-
-  // Grid & Cards
-  grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
-  cardWrapper: { width: "48%", marginBottom: 15 },
-  card: { 
-    backgroundColor: "#111", 
-    padding: 16, 
-    borderRadius: 24, 
-    borderWidth: 1, 
-    borderColor: "#1A1A1A",
-    minHeight: 195,
-    justifyContent: 'space-between',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-  },
-
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  iconContainer: { width: 44, height: 44, borderRadius: 14, backgroundColor: "#1A1A1A", justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#222' },
-  iconText: { fontSize: 22 },
-
-  tag: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, backgroundColor: '#D4AF3710', borderWidth: 1, borderColor: '#D4AF3720' },
-  tagText: { color: '#D4AF37', fontSize: 8, fontWeight: '900', letterSpacing: 0.5 },
-
-  contentArea: { marginTop: 15 },
-  title: { color: "#FFF", fontSize: 15, fontWeight: "800", lineHeight: 20 },
-  desc: { color: "#555", fontSize: 11, fontWeight: "600", marginTop: 6, lineHeight: 15 },
-
-  footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 15, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#1A1A1A' },
-  applyText: { color: "#D4AF37", fontSize: 10, fontWeight: "900", textTransform: 'uppercase' },
-  arrow: { color: "#D4AF37", fontSize: 14 }
+  expandedContent: { backgroundColor: "#0C0C0C", paddingHorizontal: 16, paddingBottom: 16, borderTopWidth: 1, borderTopColor: "#161616" },
+  subBlock: { marginTop: 16 },
+  subBlockTitle: { color: "#444", fontSize: 9, fontWeight: "900", letterSpacing: 1, marginBottom: 8 },
+  testItemRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#141414" },
+  testName: { color: "#EEE", fontSize: 13, fontWeight: "700", lineHeight: 18 },
+  testCode: { color: "#D4AF37", fontSize: 10, fontWeight: "600", marginTop: 3 },
+  actionChip: { backgroundColor: "#D4AF37", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+  actionChipText: { color: "#000", fontSize: 10, fontWeight: "900" }
 });

@@ -19,6 +19,9 @@ export type RequestItem = {
   status: string;
   date: string;
   timeline: string[];
+  sample_qty?: string;      // Captures the volume, length, or weight metric
+  contact_person?: string;  // Captures the Site In-Charge / POC details
+  remarks?: string;         // Captures technical instructions or remarks
 };
 
 type ClientType = {
@@ -57,7 +60,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       const res = await api.getProfile(user.token);
-      console.log("GET REQUESTS RESPONSE:", res);
+      console.log("GET PROFILE RESPONSE:", res);
       if (res?.success && res?.data) {
         setClient({
           name: res.data.name || "Client",
@@ -97,6 +100,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               : new Date().toISOString().split("T")[0]
           ),
           timeline: ["Request Submitted"],
+          // 🌟 Hydrate new dynamic parameters into global state
+          sample_qty: item?.sample_qty ? String(item.sample_qty) : undefined,
+          contact_person: item?.contact_person ? String(item.contact_person) : undefined,
+          remarks: item?.remarks ? String(item.remarks) : undefined,
         }));
 
         setRequests(formatted);
@@ -118,42 +125,43 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setRequests([]);
     }
   }, [user?.token, refreshClient, refreshRequests]);
+
   // ✅ Refresh when notification arrives while app is open
-useEffect(() => {
-  if (!user?.token) return;
+  useEffect(() => {
+    if (!user?.token) return;
 
-  const sub = Notifications.addNotificationReceivedListener(() => {
-    console.log("NOTIFICATION RECEIVED → REFRESH REQUESTS");
-    refreshRequests();
-  });
-
-  return () => sub.remove();
-}, [user?.token, refreshRequests]);
-
-// ✅ Refresh when app comes to foreground
-useEffect(() => {
-  if (!user?.token) return;
-
-  const sub = AppState.addEventListener("change", (state) => {
-    if (state === "active") {
-      console.log("APP ACTIVE → REFRESH REQUESTS");
+    const sub = Notifications.addNotificationReceivedListener(() => {
+      console.log("NOTIFICATION RECEIVED → REFRESH REQUESTS");
       refreshRequests();
-    }
-  });
+    });
 
-  return () => sub.remove();
-}, [user?.token, refreshRequests]);
+    return () => sub.remove();
+  }, [user?.token, refreshRequests]);
 
-// ✅ Auto refresh every 10 seconds
-useEffect(() => {
-  if (!user?.token) return;
+  // ✅ Refresh when app comes to foreground
+  useEffect(() => {
+    if (!user?.token) return;
 
-  const interval = setInterval(() => {
-    refreshRequests();
-  }, 10000);
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        console.log("APP ACTIVE → REFRESH REQUESTS");
+        refreshRequests();
+      }
+    });
 
-  return () => clearInterval(interval);
-}, [user?.token, refreshRequests]);
+    return () => sub.remove();
+  }, [user?.token, refreshRequests]);
+
+  // ✅ Auto refresh every 10 seconds
+  useEffect(() => {
+    if (!user?.token) return;
+
+    const interval = setInterval(() => {
+      refreshRequests();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [user?.token, refreshRequests]);
 
   const addRequest = () => {
     // Backend-driven now

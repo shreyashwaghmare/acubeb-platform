@@ -1,5 +1,5 @@
 import { ScrollView, Text, View, TouchableOpacity, StyleSheet, RefreshControl, ActivityIndicator } from "react-native";
-import { useEffect, useState, useCallback,useRef } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { router } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
 import { api } from "../../services/api";
@@ -16,7 +16,6 @@ export default function ReportsScreen() {
   const fetchReports = async () => {
     if (!user?.token) return;
     try {
-      // Assuming your api service has getReports
       const res = await api.getReports(user.token);
       if (res.success) {
         setReports(res.data || []);
@@ -38,14 +37,19 @@ export default function ReportsScreen() {
     fetchReports();
   }, []);
 
-useFocusEffect(
-  useCallback(() => {
-    scrollRef.current?.scrollTo({
-      y: 0,
-      animated: false,
-    });
-  }, [])
-);
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({
+        y: 0,
+        animated: false,
+      });
+    }, [])
+  );
+
+  const handleCardPress = (id: string | number) => {
+    router.push(`/report-detail?id=${id}`);
+  };
+
   // --- EMPTY STATE COMPONENT ---
   if (!loading && reports.length === 0) {
     return (
@@ -69,7 +73,7 @@ useFocusEffect(
 
   return (
     <ScrollView 
-     ref={scrollRef}
+      ref={scrollRef}
       style={styles.container} 
       contentContainerStyle={{ paddingBottom: 150 }}
       refreshControl={
@@ -84,29 +88,34 @@ useFocusEffect(
         reports.map((item, index) => (
           <Animated.View key={item.id} entering={FadeInDown.delay(index * 100)}>
             <TouchableOpacity
+              activeOpacity={0.85}
               style={styles.card}
-              onPress={() => router.push(`/report-detail?id=${item.id}`)}
+              onPress={() => handleCardPress(item.id)}
             >
               <View style={styles.cardHeader}>
-                <Text style={styles.gold}>{item.reportNo || `REP-${item.id}`}</Text>
+                <Text style={styles.gold}>{item.reportNo || item.request_no || `REP-${item.id}`}</Text>
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{item.status || 'FINAL'}</Text>
                 </View>
               </View>
 
-              <Text style={styles.title}>{item.service}</Text>
-              <Text style={styles.text}>Project: {item.project}</Text>
-              <Text style={styles.text}>Issued: {item.issueDate || item.created_at?.split('T')[0]}</Text>
+              <Text style={styles.title}>{item.service || "Engineering Evaluation Report"}</Text>
+              <Text style={styles.text}>Project: {item.project || "General Asset Allocation"}</Text>
+              <Text style={styles.text}>Issued: {item.issueDate || (item.created_at ? item.created_at.split('T')[0] : "Recent")}</Text>
 
               <View style={styles.buttonRow}>
-                <TouchableOpacity 
-                  style={[styles.actionButton, styles.fillButton]}
-                  onPress={() => router.push(`/report-detail?id=${item.id}`)}
-                >
+                {/* Simplified non-nested button block to protect navigation route state */}
+                <View style={[styles.actionButton, styles.fillButton]}>
                   <Text style={styles.buttonText}>View Details</Text>
-                </TouchableOpacity>
+                </View>
                 
-                <TouchableOpacity style={[styles.actionButton, styles.outlineButton]}>
+                <TouchableOpacity 
+                  style={[styles.actionButton, styles.outlineButton]}
+                  onPress={(e) => {
+                    e.stopPropagation(); // Stops touch bubbling entirely
+                    // Implement your QR verify action securely here
+                  }}
+                >
                   <Text style={styles.outlineText}>Verify QR</Text>
                 </TouchableOpacity>
               </View>
@@ -135,7 +144,7 @@ const styles = StyleSheet.create({
 
   // Buttons
   buttonRow: { flexDirection: 'row', gap: 10, marginTop: 18 },
-  actionButton: { flex: 1, padding: 12, borderRadius: 12, alignItems: 'center' },
+  actionButton: { flex: 1, padding: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   fillButton: { backgroundColor: "#D4AF37" },
   outlineButton: { borderColor: "#333", borderWidth: 1 },
   buttonText: { color: "#111", fontWeight: "900", fontSize: 14 },

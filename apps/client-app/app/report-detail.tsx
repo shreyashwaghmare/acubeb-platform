@@ -29,14 +29,14 @@ export default function ReportDetailScreen() {
 
   useEffect(() => {
     const fetchReport = async () => {
-      if (!user?.token) return;
+      if (!user?.token || !id) return;
       try {
         const res = await api.getReportById(id, user.token);
         if (res.success) setReport(res.data);
       } catch (e) { console.log("Fetch error", e); }
     };
     fetchReport();
-  }, [id]);
+  }, [id, user?.token]);
 
   const handleVerify = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -49,9 +49,10 @@ export default function ReportDetailScreen() {
   };
 
   const handleShare = async () => {
+    if (!report) return;
     try {
       await Share.share({
-        message: `A-Cube-B Digital Report ${report.reportNo} for ${report.project}. Verify at: ${report.pdfUrl}`,
+        message: `A-Cube-B Digital Report ${report.reportNo || ''} for ${report.project || ''}. Verify at: ${report.pdfUrl || ''}`,
       });
     } catch (error) { console.log(error); }
   };
@@ -62,8 +63,10 @@ export default function ReportDetailScreen() {
     </View>
   );
 
+  const reportStatus = report?.status || "FINAL";
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
       
       {/* TOP NAVIGATION OVERLAY */}
       <View style={styles.navHeader}>
@@ -78,34 +81,39 @@ export default function ReportDetailScreen() {
       {/* HERO SECTION - THE "DOSSIER" LOOK */}
       <Animated.View entering={FadeInUp.duration(600)} style={styles.hero}>
         <View style={styles.heroRow}>
-          <View>
+          <View style={{ flex: 1, paddingRight: 10 }}>
             <Text style={styles.idLabel}>OFFICIAL CERTIFICATE</Text>
-            <Text style={styles.reportNo}>{report.reportNo}</Text>
+            <Text style={styles.reportNo}>{report.reportNo || `REP-ACB-${String(id).slice(0, 5).toUpperCase()}`}</Text>
           </View>
           <Animated.View style={[styles.trustSeal, animatedPulse]}>
             <Text style={styles.sealText}>✓</Text>
           </Animated.View>
         </View>
         
-        <Text style={styles.serviceTitle}>{report.service}</Text>
+        <Text style={styles.serviceTitle}>{report.service || "Engineering Quality Evaluation"}</Text>
         <View style={styles.statusPill}>
-          <View style={[styles.dot, { backgroundColor: getStatusColor(report.status) }]} />
-          <Text style={styles.statusText}>{report.status.toUpperCase()}</Text>
+          <View style={[styles.dot, { backgroundColor: getStatusColor(reportStatus) }]} />
+          <Text style={styles.statusText}>{String(reportStatus).toUpperCase()}</Text>
         </View>
       </Animated.View>
 
-      {/* INTERACTIVE SPECS */}
+      {/* INTERACTIVE BENTO-STYLE SPECS */}
       <Animated.View entering={FadeInDown.delay(200)} style={styles.specGrid}>
         <SpecBox label="Project Name" value={report.project} />
-        <SpecBox label="Issue Authority" value="A Cube B Engineering" />
+        <SpecBox label="Issue Authority" value="A Cube B Lab Quality Control" />
+        
+        {/* Injecting your dynamic scope variables if passed by the context handler */}
+        {!!report.sample_qty && <SpecBox label="Tested Volume / Qty" value={report.sample_qty} />}
+        {!!report.contact_person && <SpecBox label="Site Quality In-Charge" value={report.contact_person} />}
+        
+        <SpecBox label="Timestamp" value={report.issueDate || (report.created_at ? report.created_at.split('T')[0] : "Recent")} />
         <SpecBox label="Valid Until" value="Indefinite (Digital Record)" />
-        <SpecBox label="Timestamp" value={report.issueDate} />
       </Animated.View>
 
       {/* SECURE QR BOX */}
       <Animated.View entering={FadeInDown.delay(400)} style={styles.qrSection}>
         <View style={styles.qrWrapper}>
-          <QRCode value={report.verificationCode || "ACUBEB"} size={160} color="#000" backgroundColor="transparent" />
+          <QRCode value={report.verificationCode || report.reportNo || "ACUBEB"} size={160} color="#000" backgroundColor="transparent" />
         </View>
         <Text style={styles.qrHint}>DYNAMIC AUTHENTICATION QR</Text>
         <Text style={styles.qrSub}>This code verifies the report record stored in A Cube B secure database.</Text>
@@ -119,7 +127,7 @@ export default function ReportDetailScreen() {
 
         <TouchableOpacity 
            style={styles.secondaryBtn} 
-           onPress={() => report.pdfUrl ? Linking.openURL(report.pdfUrl) : showToast("Generating PDF...", "info")}
+           onPress={() => report.pdfUrl ? Linking.openURL(report.pdfUrl) : showToast("Syncing with storage bucket...", "info")}
         >
           <Text style={styles.secondaryBtnText}>ACCESS PDF CLOUD</Text>
         </TouchableOpacity>
@@ -129,19 +137,19 @@ export default function ReportDetailScreen() {
   );
 }
 
-// Sub-component for Bento-style detail boxes
 function SpecBox({ label, value }: any) {
   return (
     <View style={styles.specBox}>
       <Text style={styles.specLabel}>{label}</Text>
-      <Text style={styles.specValue}>{value}</Text>
+      <Text style={styles.specValue}>{value || "Verified Protocol"}</Text>
     </View>
   );
 }
 
 function getStatusColor(status: string) {
-  if (status === "Completed") return "#4CAF50";
-  if (status === "Pending") return "#FF9800";
+  const norm = String(status || "").toLowerCase();
+  if (norm.includes("complete") || norm.includes("shared") || norm.includes("approved")) return "#4CAF50";
+  if (norm.includes("pending") || norm.includes("progress")) return "#FF9800";
   return "#D4AF37";
 }
 
@@ -158,7 +166,7 @@ const styles = StyleSheet.create({
   trustSeal: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(212, 175, 55, 0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#D4AF37' },
   sealText: { color: '#D4AF37', fontWeight: '900', fontSize: 18 },
   
-  serviceTitle: { color: "#FFF", fontSize: 20, fontWeight: "800", marginTop: 15 },
+  serviceTitle: { color: "#FFF", fontSize: 18, fontWeight: "800", marginTop: 15, lineHeight: 24 },
   statusPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#000', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, marginTop: 12, borderWidth: 1, borderColor: '#1A1A1A' },
   dot: { width: 6, height: 6, borderRadius: 3, marginRight: 8 },
   statusText: { color: "#FFF", fontSize: 10, fontWeight: "900", letterSpacing: 1 },
@@ -166,7 +174,7 @@ const styles = StyleSheet.create({
   specGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 15 },
   specBox: { width: '48%', backgroundColor: '#121212', padding: 15, borderRadius: 20, borderWidth: 1, borderColor: '#1A1A1A' },
   specLabel: { color: '#555', fontSize: 9, fontWeight: '900', textTransform: 'uppercase' },
-  specValue: { color: '#CCC', fontSize: 13, fontWeight: '700', marginTop: 4 },
+  specValue: { color: '#CCC', fontSize: 13, fontWeight: '700', marginTop: 4, lineHeight: 18 },
 
   qrSection: { backgroundColor: '#FFF', borderRadius: 30, padding: 30, marginTop: 15, alignItems: 'center' },
   qrWrapper: { padding: 10, backgroundColor: '#FFF' },
