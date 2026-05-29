@@ -4,7 +4,6 @@ const pool = require("../config/db");
 const admin = require("../config/firebase");
 
 const createToken = (user) => {
-  // Defensive guard clause to catch environment failures early
   if (!process.env.JWT_SECRET) {
     throw new Error("Critical Configuration Error: JWT_SECRET environment variable is missing.");
   }
@@ -14,6 +13,11 @@ const createToken = (user) => {
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
   );
+};
+
+// Helper utility to safely detect truly populated string updates
+const isValidUpdateValue = (val) => {
+  return val !== undefined && val !== null && String(val).trim() !== "";
 };
 
 exports.register = async (req, res) => {
@@ -166,11 +170,12 @@ exports.firebaseLogin = async (req, res) => {
     } else {
       user = result.rows[0];
 
-      // ✅ Update latest profile info safely using local JavaScript evaluations
-      const updatedMobile = mobile !== undefined ? mobile : user.mobile;
-      const updatedEmail = email !== undefined ? email : user.email;
-      const updatedName = name !== undefined ? name : user.name;
-      const updatedProfileImage = profileImage !== undefined ? profileImage : user.profile_image;
+      // 🌟 IMPROVISATION: Verify that the incoming fields actually contain strings before mutating records.
+      // If the property is absent, empty, or unpopulated, cleanly retain your existing Supabase settings.
+      const updatedMobile       = isValidUpdateValue(mobile) ? mobile : user.mobile;
+      const updatedEmail        = isValidUpdateValue(email) ? email : user.email;
+      const updatedName         = isValidUpdateValue(name) ? name : user.name;
+      const updatedProfileImage = isValidUpdateValue(profileImage) ? profileImage : user.profile_image;
 
       const updatedResult = await pool.query(
         `
