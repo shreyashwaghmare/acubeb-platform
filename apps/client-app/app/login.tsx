@@ -135,15 +135,22 @@ export default function LoginScreen() {
       const firebaseToken = await credential.user.getIdToken();
       const cleanMobile = mobile.replace(/\D/g, "");
 
-      // Execute unified auth routing structure
-      const res = await api.firebaseLogin({
+      // 🌟 FIX: CONSTRUCT CLEAN DYNAMIC PAYLOAD TO PREVENT PROFILE OVERWRITES
+      const loginPayload: any = {
         firebaseToken,
         mobile: cleanMobile,
-        email: credential.user.email || "",
-        name: isNewUser ? name.trim() : credential.user.displayName || "Client",
-        profileImage: credential.user.photoURL || "",
         provider: "phone",
-      });
+      };
+
+      // Only pass registration fields if it's explicitly a new user profile setup
+      if (isNewUser) {
+        loginPayload.name = name.trim();
+        if (credential.user.email) loginPayload.email = credential.user.email;
+        if (credential.user.photoURL) loginPayload.profileImage = credential.user.photoURL;
+      }
+
+      // Execute unified auth routing structure with protected payload data
+      const res = await api.firebaseLogin(loginPayload);
 
       if (res?.success) {
         showToast("Welcome to A Cube B", "success");
