@@ -5,7 +5,7 @@ const authRoutes = require("./routes/authRoutes");
 const profileRoutes = require("./routes/profileRoutes");
 const requestRoutes = require("./routes/requestRoutes");
 const reportRoutes = require("./routes/reportRoutes");
-
+const operatorRoutes = require("./routes/operatorRoutes");
 const app = express();
 
 /* ===================== MIDDLEWARE ===================== */
@@ -38,7 +38,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/requests", requestRoutes);
 app.use("/api/reports", reportRoutes);
-
+app.use("/api/operator", operatorRoutes);
 /* ===================== 404 HANDLER ===================== */
 
 app.use((req, res) => {
