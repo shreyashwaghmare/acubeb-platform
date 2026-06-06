@@ -1,1 +1,1 @@
-export const BASE_URL = "https://acubeb-platform.onrender.com";
+export const BASE_URL = "https://acubeb-platform.onrender.com/api";
