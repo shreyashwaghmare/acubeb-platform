@@ -24,7 +24,6 @@ const getStatusMessage = (status) => {
 /* ===================== GET OPERATOR TASK ROSTER ===================== */
 exports.getOperatorTasks = async (req, res) => {
   try {
-    // Restrict query context access to users registered with operational engineering clearance
     if (req.user.role !== "operator" && req.user.role !== "admin") {
       return res.status(403).json({
         success: false,
@@ -32,7 +31,10 @@ exports.getOperatorTasks = async (req, res) => {
       });
     }
 
-    // Pivot filtering query against your live schema structure using user_id mapping
+    console.log("--- 🕵️‍♂️ RUNNING UNFILTERED DEV FETCH ---");
+    console.log("Logged-In Operator User ID from App JWT Token:", req.user.id);
+
+    // 🌟 TEMPORARY DEVELOPMENT OVERRIDE: Fetch everything to verify connection
     const result = await pool.query(
       `SELECT
         id,
@@ -46,10 +48,15 @@ exports.getOperatorTasks = async (req, res) => {
         status,
         created_at
       FROM service_requests
-      WHERE user_id = $1 OR status = 'OPERATOR_ASSIGNED'
-      ORDER BY created_at DESC`,
-      [req.user.id]
+      ORDER BY created_at DESC`
     );
+
+    console.log(`Database returned ${result.rows.length} total rows to local server.`);
+    
+    // Print out the first row's user_id so we can compare it with what the app sent
+    if (result.rows.length > 0) {
+      console.log("Target Task Row user_id in Supabase is currently:", result.rows[0].user_id);
+    }
 
     res.json({
       success: true,
@@ -63,7 +70,6 @@ exports.getOperatorTasks = async (req, res) => {
     });
   }
 };
-
 /* ===================== MUTATE REQUEST TIMELINE STATE ===================== */
 exports.mutateOperatorStatus = async (req, res) => {
   try {

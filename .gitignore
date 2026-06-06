@@ -31,4 +31,7 @@ yarn-error.log*
 
 # Ignore all compiled Android application binaries
 *.apk
-*.aab
+*.aab.env
+backend/.env
+google-services.json
+GoogleService-Info.plist

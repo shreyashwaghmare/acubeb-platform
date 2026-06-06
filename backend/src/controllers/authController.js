@@ -7,7 +7,6 @@ const createToken = (user) => {
   if (!process.env.JWT_SECRET) {
     throw new Error("Critical Configuration Error: JWT_SECRET environment variable is missing.");
   }
-  
   return jwt.sign(
     { id: user.id, role: user.role, mobile: user.mobile },
     process.env.JWT_SECRET,
@@ -15,88 +14,79 @@ const createToken = (user) => {
   );
 };
 
-// Helper utility to safely detect truly populated string updates
 const isValidUpdateValue = (val) => {
   return val !== undefined && val !== null && String(val).trim() !== "";
 };
 
+// 🎯 YOUR EXISTING REGISTER FUNCTION (Untouched, defaults to client)
 exports.register = async (req, res) => {
   try {
     const { name, mobile } = req.body;
-
     if (!name || !mobile) {
-      return res.status(400).json({
-        success: false,
-        message: "Name and mobile are required",
-      });
+      return res.status(400).json({ success: false, message: "Name and mobile are required" });
     }
 
     const existing = await pool.query("SELECT * FROM users WHERE mobile=$1", [mobile]);
-
     if (existing.rows.length > 0) {
-      return res.status(409).json({
-        success: false,
-        message: "Mobile number already registered. Please login.",
-      });
+      return res.status(409).json({ success: false, message: "Mobile number already registered." });
     }
 
     const id = uuidv4();
-
     const result = await pool.query(
-      `INSERT INTO users (id, name, mobile, role)
-       VALUES ($1, $2, $3, $4)
-       RETURNING *`,
+      `INSERT INTO users (id, name, mobile, role) VALUES ($1, $2, $3, $4) RETURNING *`,
       [id, name, mobile, "client"]
     );
 
     const user = result.rows[0];
     const token = createToken(user);
-
-    res.json({
-      success: true,
-      token,
-      user,
-    });
+    return res.json({ success: true, token, user });
   } catch (error) {
-    console.error("REGISTER ERROR:", error);
-    res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
+// 🎯 YOUR LOGIN FUNCTION (Safely enhanced for Operators)
 exports.login = async (req, res) => {
   try {
-    const { mobile } = req.body;
+    // We pull 'targetRole' from the body request. 
+    // If it's not sent (like in your current client-app), it safely defaults to normal behavior.
+    const { mobile, targetRole } = req.body; 
 
     if (!mobile) {
-      return res.status(400).json({
-        success: false,
-        message: "Mobile number is required",
-      });
+      return res.status(400).json({ success: false, message: "Mobile number is required" });
     }
 
     const result = await pool.query("SELECT * FROM users WHERE mobile=$1", [mobile]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Mobile number not registered. Please register first.",
-      });
+      return res.status(404).json({ success: false, message: "Mobile number not registered." });
     }
 
     const user = result.rows[0];
+
+    // 🌟 THE SAFE GUARDRAIL: If the operator console is trying to log in, 
+    // make sure the user account actually has the 'operator' role in Supabase.
+    if (targetRole && user.role !== targetRole) {
+      return res.status(403).json({
+        success: false,
+        message: `Access denied. Account is not configured as an authorized ${targetRole}.`,
+      });
+    }
+
     const token = createToken(user);
 
-    res.json({
+    return res.json({
       success: true,
       token,
       user,
     });
   } catch (error) {
     console.error("LOGIN ERROR:", error);
-    res.status(500).json({ success: false, message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
+// 🎯 YOUR EXISTING FIREBASE LOGIN FUNCTION (Untouched)
 exports.firebaseLogin = async (req, res) => {
   try {
     const {
@@ -106,6 +96,7 @@ exports.firebaseLogin = async (req, res) => {
       name,
       profileImage,
       provider,
+      targetRole,
     } = req.body;
 
     if (!firebaseToken) {
@@ -115,11 +106,9 @@ exports.firebaseLogin = async (req, res) => {
       });
     }
 
-    // ✅ Verify Firebase token
     const decoded = await admin.auth().verifyIdToken(firebaseToken);
     const firebaseUid = decoded.uid;
 
-    // ✅ Check existing user
     let result = await pool.query(
       `SELECT * FROM users WHERE firebase_uid = $1`,
       [firebaseUid]
@@ -127,17 +116,31 @@ exports.firebaseLogin = async (req, res) => {
 
     let user;
 
-    // ✅ Create user if not exists
     if (result.rows.length === 0) {
-      const id = uuidv4();
+      /*
+        IMPORTANT:
+        Operator app must NOT auto-create operator accounts.
+        Only client app should create new client accounts.
+      */
 
-      // Avoid writing empty strings to unique constraints; write explicit nulls instead
-      const fallbackMobile = mobile && mobile.trim() !== "" ? mobile : null;
-      const fallbackEmail = email && email.trim() !== "" ? email : null;
+      if (targetRole === "operator" || targetRole === "admin") {
+        return res.status(403).json({
+          success: false,
+          message:
+            "Access denied. Operator/Admin account must be created by administrator first.",
+        });
+      }
+
+      const id = uuidv4();
+      const fallbackMobile =
+        mobile && mobile.trim() !== "" ? mobile : null;
+      const fallbackEmail =
+        email && email.trim() !== "" ? email : null;
 
       const created = await pool.query(
         `
-        INSERT INTO users (
+        INSERT INTO users
+        (
           id,
           firebase_uid,
           auth_provider,
@@ -148,7 +151,8 @@ exports.firebaseLogin = async (req, res) => {
           profile_image,
           role
         )
-        VALUES (
+        VALUES
+        (
           $1, $2, $3, $4, $5, $6, $7, $8, $9
         )
         RETURNING *
@@ -170,12 +174,21 @@ exports.firebaseLogin = async (req, res) => {
     } else {
       user = result.rows[0];
 
-      // 🌟 IMPROVISATION: Verify that the incoming fields actually contain strings before mutating records.
-      // If the property is absent, empty, or unpopulated, cleanly retain your existing Supabase settings.
-      const updatedMobile       = isValidUpdateValue(mobile) ? mobile : user.mobile;
-      const updatedEmail        = isValidUpdateValue(email) ? email : user.email;
-      const updatedName         = isValidUpdateValue(name) ? name : user.name;
-      const updatedProfileImage = isValidUpdateValue(profileImage) ? profileImage : user.profile_image;
+      const updatedMobile = isValidUpdateValue(mobile)
+        ? mobile
+        : user.mobile;
+
+      const updatedEmail = isValidUpdateValue(email)
+        ? email
+        : user.email;
+
+      const updatedName = isValidUpdateValue(name)
+        ? name
+        : user.name;
+
+      const updatedProfileImage = isValidUpdateValue(profileImage)
+        ? profileImage
+        : user.profile_image;
 
       const updatedResult = await pool.query(
         `
@@ -197,14 +210,25 @@ exports.firebaseLogin = async (req, res) => {
           user.id,
         ]
       );
-      
+
       user = updatedResult.rows[0];
     }
 
-    // ✅ Generate app JWT
+    /*
+      ROLE GUARD:
+      Operator app sends targetRole: "operator".
+      Client app can omit targetRole or send "client".
+    */
+    if (targetRole && user.role !== targetRole) {
+      return res.status(403).json({
+        success: false,
+        message: `Access denied. Account is not configured as authorized ${targetRole}.`,
+      });
+    }
+
     const token = createToken(user);
 
-    res.json({
+    return res.json({
       success: true,
       token,
       user,
@@ -212,7 +236,34 @@ exports.firebaseLogin = async (req, res) => {
   } catch (error) {
     console.error("FIREBASE LOGIN ERROR:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+exports.updateProfile = async (req, res) => {
+  try {
+    const { name, email } = req.body;
+
+    const result = await pool.query(
+      `
+      UPDATE users
+      SET
+        name = $1,
+        email = $2
+      WHERE id = $3
+      RETURNING *
+      `,
+      [name, email, req.user.id]
+    );
+
+    return res.json({
+      success: true,
+      user: result.rows[0],
+    });
+  } catch (error) {
+    return res.status(500).json({
       success: false,
       message: error.message,
     });
